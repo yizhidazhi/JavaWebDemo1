@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"  type="module"></script>
+  <title>博客写作平台</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: #f5f7fa;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: 700;
+      color: #3498db;
+    }
+
+    .actions {
+      display: flex;
+      gap: 15px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+      background-color: #3498db;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: #2980b9;
+    }
+
+    .btn-secondary {
+      background-color: #ecf0f1;
+      color: #7f8c8d;
+    }
+
+    .btn-secondary:hover {
+      background-color: #dfe6e9;
+    }
+
+    .editor-container {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      padding: 15px;
+      border-bottom: 1px solid #eee;
+      background-color: #f8f9fa;
+    }
+
+    .tool-btn {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      border-radius: 4px;
+      background: white;
+      cursor: pointer;
+      font-size: 16px;
+      color: #555;
+      transition: all 0.2s ease;
+    }
+
+    .tool-btn:hover {
+      background-color: #e8f4fc;
+      color: #3498db;
+    }
+
+    .title-input {
+      width: 100%;
+      padding: 20px;
+      font-size: 24px;
+      font-weight: 600;
+      border: none;
+      border-bottom: 1px solid #eee;
+      outline: none;
+    }
+
+    .title-input::placeholder {
+      color: #bbb;
+    }
+
+    .content-editor {
+      min-height: 400px;
+      padding: 20px;
+      font-size: 18px;
+      line-height: 1.6;
+      border: none;
+      outline: none;
+      resize: vertical;
+    }
+
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      padding: 15px 20px;
+      background-color: #f8f9fa;
+      border-top: 1px solid #eee;
+      color: #95a5a6;
+      font-size: 14px;
+    }
+
+    .word-count {
+      display: flex;
+      align-items: center;
+    }
+
+
+    .save-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: #2ecc71;
+      margin-right: 5px;
+    }
+
+    .saving .save-indicator {
+      background-color: #f39c12;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 10px;
+      }
+
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+      }
+
+      .actions {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .btn {
+        flex: 1;
+      }
+
+      .title-input {
+        font-size: 20px;
+      }
+
+      .content-editor {
+        font-size: 16px;
+      }
+    }
+
+    .ai-toggle-container {
+      background-color: #f8f9fa;
+    }
+
+    .ai-container {
+      margin-top: 0;
+      border-radius: 0;
+      overflow: hidden;
+      box-shadow: none;
+      background-color: #fff;
+      max-height: 0;
+      opacity: 0;
+      transition: max-height 0.5s ease, opacity 0.5s ease;
+    }
+
+    .ai-container.show {
+      max-height: 800px;
+      opacity: 1;
+      border: 1px solid #eee;
+      border-top: none;
+    }
+
+    .chat-header {
+      padding: 16px 20px;
+      background-color: #4080ff;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .chat-header .header-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background-color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .chat-header .header-avatar i {
+      color: #4080ff;
+      font-size: 18px;
+    }
+
+    .chat-header h2 {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    /* 聊天内容区 */
+    .chat-output {
+      height: 500px;
+      padding: 24px 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      background-color: #fafbfc;
+    }
+
+    /* 滚动条优化 */
+    .chat-output::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .chat-output::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 3px;
+    }
+
+    .chat-output::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+
+    .chat-output::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* 消息容器（包含头像和消息气泡） */
+    .message-wrapper {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      max-width: 80%;
+    }
+
+    /* 用户消息靠右 */
+    .message-wrapper.user {
+      margin-left: auto;
+      flex-direction: row-reverse;
+    }
+
+    /* 头像样式 */
+    .message-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background-color: #e2e8f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-shrink: 0; /* 防止头像被压缩 */
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .message-avatar.user {
+      background-color: #4080ff;
+      color: white;
+    }
+
+    .message-avatar.bot {
+      background-color: #36d399;
+      color: white;
+    }
+
+    .message-avatar i {
+      font-size: 18px;
+    }
+
+    /* 消息气泡 */
+    .message {
+      padding: 12px 18px;
+      border-radius: 18px;
+      word-wrap: break-word;
+      line-height: 1.5;
+      position: relative;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    }
+
+    /* 用户消息气泡 */
+    .message.user {
+      background-color: #4080ff;
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    /* AI消息气泡 */
+    .message.bot {
+      background-color: white;
+      color: #334155;
+      border-bottom-left-radius: 4px;
+      border: 1px solid #f1f5f9;
+    }
+
+    .message p {
+      margin: 0;
+      font-size: 15px;
+    }
+
+    /* 输入区优化 */
+    .chat-input-area {
+      display: flex;
+      align-items: center;
+      padding: 12px 20px;
+      background-color: white;
+      border-top: 1px solid #f1f5f9;
+      gap: 10px;
+    }
+
+    #userInput {
+      flex-grow: 1;
+      padding: 14px 18px;
+      border: 1px solid #e2e8f0;
+      border-radius: 24px;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.3s ease;
+    }
+
+    #userInput:focus {
+      border-color: #4080ff;
+    }
+
+    #sendButton {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background-color: #4080ff;
+      color: white;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background-color 0.2s ease, transform 0.1s ease;
+    }
+
+    #sendButton:hover {
+      background-color: #3070e0;
+    }
+
+    #sendButton:active {
+      transform: scale(0.95);
+    }
+
+    #sendButton i {
+      font-size: 18px;
+    }
+
+    /* 加载状态 */
+    .loading {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      color: #94a3b8;
+      font-size: 14px;
+    }
+
+    .loading-spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid #e2e8f0;
+      border-top-color: #4080ff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* 移动端适配 */
+    @media (max-width: 768px) {
+      .chat-output {
+        height: 400px;
+      }
+    }
+    .ai-toggle-container {
+      background-color: #f8f9fa;
+      padding: 15px 20px;
+      border-bottom: 1px solid #eee;
+      text-align: right;
+      /* 添加明确的z-index确保不被遮挡 */
+      z-index: 10;
+      position: relative;
+    }
+
+  </style>
+</head>
+<body>
+
+<div id="app" class="container">
+  <header>
+    <div class="logo">我的博客</div>
+    <div class="actions">
+      <button class="btn btn-secondary" @click="saveDraft">保存草稿</button>
+      <button class="btn btn-primary" @click="publishArticle">发布文章</button>
+    </div>
+  </header>
+
+  <div class="editor-container">
+    <div class="toolbar">
+      <button class="tool-btn" data-command="bold" title="粗体">B</button>
+      <button class="tool-btn" data-command="italic" title="斜体">I</button>
+      <button class="tool-btn" data-command="underline" title="下划线">U</button>
+      <button class="tool-btn" data-command="insertUnorderedList" title="无序列表">≡</button>
+      <button class="tool-btn" data-command="insertOrderedList" title="有序列表">①</button>
+      <button class="tool-btn" data-command="createLink" title="插入链接">🔗</button>
+      <button class="tool-btn" data-command="formatBlock" data-value="blockquote" title="引用">❝</button>
+    </div>
+    <input type="text" class="title-input" id="title-input" v-model="title" placeholder="输入文章标题...">
+
+    <div class="content-editor"  id="content-editor" contenteditable="true" v-html="content"></div>
+
+    <div class="status-bar">
+      <div class="word-count">字数: <span id="word-count">0</span></div>
+      <div class="auto-save" id="save-indicator">
+        <span class="save-indicator"></span>
+        <span>已自动保存</span>
+      </div>
+    </div>
+
+    <div class="ai-toggle-container" style="padding: 15px 20px; border-bottom: 1px solid #eee; text-align: right;">
+      <button class="btn btn-secondary ai-btn" id="aiToggle">
+        <i class="fa fa-robot"></i> AI问答
+      </button>
+    </div>
+  </div>
+
+  <!-- AI问答容器 -->
+  <div class="ai-container" id="aiContainer">
+    <!-- 聊天头部 -->
+    <div class="chat-header">
+      <div class="header-avatar">
+        <i class="fa fa-comments"></i>
+      </div>
+      <h2>AI 智能问答</h2>
+    </div>
+
+    <!-- 聊天内容区 -->
+    <div class="chat-output" id="chatOutput">
+      <div class="message-wrapper bot">
+        <div class="message-avatar bot">
+          <i class="fa fa-robot"></i>
+        </div>
+        <div class="message bot">
+          <p>你好！有什么对于博客写作或技术问题可以问我哦~</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 输入区 -->
+    <div class="chat-input-area">
+      <input type="text" id="userInput" placeholder="请输入你的问题..." autocomplete="off">
+      <button id="sendButton">
+        <i class="fa fa-paper-plane"></i>
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+<script>
+  const { createApp } = Vue;
+  const app = createApp({
+    data() {
+      return {
+        title: '',
+        content: '',
+        saveTimer: null,
+        titleInputHandler: null,
+        contentEditorHandler: null
+      };
+    },
+    mounted() {
+      // 从本地存储加载草稿
+      const draft = JSON.parse(localStorage.getItem('blogDraft') || '{}');
+      if (draft.title) this.title = draft.title;
+      if (draft.content) this.content = draft.content;
+      this.updateWordCount();
+      this.setupAutoSave();
+    },
+    beforeUnmount() {
+      // 清理事件监听器和定时器
+      this.cleanupEventListeners();
+      if (this.saveTimer) {
+        clearTimeout(this.saveTimer);
+        this.saveTimer = null;
+      }
+    },
+    methods: {
+      // 添加缺失的 saveDraft 方法
+      saveDraft() {
+        const draft = {
+          title: this.title,
+          content: this.content,
+          timestamp: new Date().toISOString()
+        };
+        localStorage.setItem('blogDraft', JSON.stringify(draft));
+
+        // 显示保存状态
+        const saveIndicator = document.getElementById('save-indicator');
+        saveIndicator.classList.add('saving');
+        setTimeout(() => {
+          saveIndicator.classList.remove('saving');
+        }, 1000);
+
+        console.log('草稿已保存:', draft);
+      },
+
+      // updateWordCount 方法
+      updateWordCount() {
+        const text = this.content.replace(/<[^>]*>/g, ''); // 移除HTML标签
+        const wordCount = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+        const wordCountElement = document.getElementById('word-count');
+        if (wordCountElement) {
+          wordCountElement.textContent = wordCount;
+        }
+      },
+
+      cleanupEventListeners() {
+        const titleInput = document.getElementById('title-input');
+        const contentEditor = document.getElementById('content-editor');
+
+        if (titleInput && this.titleInputHandler) {
+          titleInput.removeEventListener('input', this.titleInputHandler);
+        }
+        if (contentEditor && this.contentEditorHandler) {
+          contentEditor.removeEventListener('input', this.contentEditorHandler);
+        }
+      },
+      setupAutoSave() {
+        const titleInput = document.getElementById('title-input');
+        const contentEditor = document.getElementById('content-editor');
+
+        if (!titleInput || !contentEditor) return;
+
+        // 清理旧的监听器
+        this.cleanupEventListeners();
+
+        // 定义处理函数
+        this.titleInputHandler = () => {
+          clearTimeout(this.saveTimer);
+          this.title = titleInput.value;
+          this.saveTimer = setTimeout(this.saveDraft, 2000);
+        };
+
+        this.contentEditorHandler = () => {
+          clearTimeout(this.saveTimer);
+          this.content = contentEditor.innerHTML;
+          this.updateWordCount();
+          this.saveTimer = setTimeout(this.saveDraft, 2000);
+        };
+
+        // 添加新监听器
+        titleInput.addEventListener('input', this.titleInputHandler);
+        contentEditor.addEventListener('input', this.contentEditorHandler);
+      },
+      publishArticle() {
+        if (!this.title.trim()) {
+          alert('请输入文章标题');
+          document.getElementById('title-input').focus();
+          return;
+        }
+
+        if (!this.content.trim()) {
+          alert('文章内容不能为空');
+          document.getElementById('content-editor').focus();
+          return;
+        }
+
+
+        const params = new URLSearchParams();
+        params.append('title', this.title);
+        params.append('content', this.content);
+
+
+        console.log(this.title)
+        console.log(this.content);
+
+
+        // 发送请求到后端
+        axios.post("http://localhost:8881/JavaWeb/write", params, {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
+          }
+        })
+                .then(response => {
+                  if (response.status === 200) {
+                    console.log('文章发布成功:', response.data);
+                    // 清空草稿
+                    localStorage.removeItem('blogDraft');
+                    this.title = '';
+                    this.content = '';
+                    this.updateWordCount();
+                  }
+                })
+                .catch(error => {
+                  console.error('发布错误:', error);
+                  alert('发布失败，请重试');
+                });
+      }
+    }
+  });
+  app.mount('#app');
+
+  const aiToggle = document.getElementById('aiToggle');
+  const aiContainer = document.getElementById('aiContainer');
+
+  aiToggle.addEventListener('click', () => {
+    aiContainer.classList.toggle('show');
+    aiToggle.classList.toggle('active');
+    // 显示时让输入框获得焦点
+    if (aiContainer.classList.contains('show')) {
+      document.getElementById('userInput').focus();
+    }
+  });
+
+  // AI问答功能实现
+  const userInput = document.getElementById('userInput');
+  const sendButton = document.getElementById('sendButton');
+  const chatOutput = document.getElementById('chatOutput');
+
+  // 替换为你的 SiliconFlow API 密钥
+  const API_KEY = 'sk-zegjjoqfilnkcgmuhpcpkayxjvxxwjsoykfidpkwkbuwybuv';
+  const API_ENDPOINT = 'https://api.siliconflow.cn/v1/chat/completions';
+
+  // 添加加载状态
+  function addLoadingState() {
+    const loadingWrapper = document.createElement('div');
+    loadingWrapper.classList.add('message-wrapper', 'bot');
+    loadingWrapper.id = 'loadingState';
+
+    const avatar = document.createElement('div');
+    avatar.classList.add('message-avatar', 'bot');
+    avatar.innerHTML = '<i class="fa fa-robot"></i>';
+
+    const loadingDiv = document.createElement('div');
+    loadingDiv.classList.add('loading');
+    loadingDiv.innerHTML = `
+          <div class="loading-spinner"></div>
+          <span>AI 正在思考...</span>
+      `;
+
+    loadingWrapper.appendChild(avatar);
+    loadingWrapper.appendChild(loadingDiv);
+    chatOutput.appendChild(loadingWrapper);
+    chatOutput.scrollTop = chatOutput.scrollHeight;
+  }
+
+  // 移除加载状态
+  function removeLoadingState() {
+    const loadingState = document.getElementById('loadingState');
+    if (loadingState) loadingState.remove();
+  }
+
+  // 添加消息到聊天界面
+  function addMessage(message, sender) {
+    const messageWrapper = document.createElement('div');
+    messageWrapper.classList.add('message-wrapper', sender);
+
+    // 头像元素
+    const avatar = document.createElement('div');
+    avatar.classList.add('message-avatar', sender);
+    if (sender === 'user') {
+      avatar.innerHTML = '<i class="fa fa-user"></i>';
+    } else {
+      avatar.innerHTML = '<i class="fa fa-robot"></i>';
+    }
+
+    // 消息气泡
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add('message', sender);
+
+    const messageP = document.createElement('p');
+    messageP.textContent = message;
+    messageDiv.appendChild(messageP);
+
+    // 组装消息容器
+    messageWrapper.appendChild(avatar);
+    messageWrapper.appendChild(messageDiv);
+
+    chatOutput.appendChild(messageWrapper);
+    chatOutput.scrollTop = chatOutput.scrollHeight;
+  }
+
+  // 调用API获取AI回复
+  async function getAiResponse(userQuestion) {
+    const requestBody = {
+      "model": "Qwen/QwQ-32B",
+      "messages": [{"role": "user", "content": userQuestion}]
+    };
+
+    try {
+      const response = await fetch(API_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`请求失败: ${errorData.error?.message || response.statusText}`);
+      }
+
+      const data = await response.json();
+      if (data.choices && data.choices[0]?.message?.content) {
+        return data.choices[0].message.content;
+      } else {
+        return "抱歉，AI 未能返回有效回复";
+      }
+
+    } catch (error) {
+      console.error('API 调用错误:', error);
+      return `通信错误: ${error.message}`;
+    }
+  }
+
+  // 处理发送逻辑
+  async function handleSend() {
+    const userMessage = userInput.value.trim();
+    if (!userMessage) return;
+
+    // 添加用户消息
+    addMessage(userMessage, 'user');
+    userInput.value = '';
+
+    // 显示加载状态
+    addLoadingState();
+
+    // 获取AI回复并显示
+    const aiReply = await getAiResponse(userMessage);
+    removeLoadingState();
+    addMessage(aiReply, 'bot');
+  }
+
+  // 绑定事件
+  sendButton.addEventListener('click', handleSend);
+  userInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  });
+
+
+</script>
+</body>
+</html>

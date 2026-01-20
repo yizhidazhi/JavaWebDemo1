@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaWeb中的Servlet - 一只大志的博客</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        /* 基础样式：统一页面风格 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        /* 卡片通用样式：参考图片中的白色卡片 + 评论区定位父容器 */
+        .card {
+            position: relative;
+            overflow: hidden;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            padding: 24px;
+            margin-bottom: 20px;
+            transition: box-shadow 0.3s ease;
+        }
+        .card:hover {
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+        }
+        /* 1. 作者信息区样式 */
+        .author-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .author-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .author-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .author-meta {
+            display: flex;
+            flex-direction: column;
+        }
+        .author-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+        .author-stats {
+            display: flex;
+            gap: 15px;
+            margin-top: 5px;
+            font-size: 14px;
+            color: #666;
+        }
+        .author-stats span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .author-stats .num {
+            color: #6a11cb;
+            font-weight: 500;
+        }
+        /* 2. 博客标题与元数据样式 */
+        .blog-title {
+            font-size: 28px;
+            color: #1a1a1a;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .blog-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 25px;
+        }
+        .blog-meta span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .blog-tag {
+            background: #f0e6ff;
+            color: #6a11cb;
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+        /* 3. 博客正文样式（技术博客适配） */
+        .blog-content {
+            font-size: 16px;
+            color: #333;
+        }
+        .blog-content h2 {
+            font-size: 22px;
+            color: #1a1a1a;
+            margin: 30px 0 15px;
+            padding-left: 10px;
+            border-left: 4px solid #6a11cb;
+        }
+        .blog-content h3 {
+            font-size: 18px;
+            color: #222;
+            margin: 25px 0 12px;
+        }
+        .blog-content p {
+            margin-bottom: 15px;
+            line-height: 1.8;
+        }
+        .blog-content ol, .blog-content ul {
+            margin: 0 0 15px 20px;
+            line-height: 1.8;
+        }
+        .blog-content li {
+            margin-bottom: 8px;
+        }
+        .blog-content pre {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            overflow-x: auto;
+            border-left: 4px solid #6a11cb;
+        }
+        .blog-content code {
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #d63384;
+            background: #f0f0f0;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+        /* 4. 交互图标区（含评论入口） */
+        .interactive-bar {
+            display: flex;
+            gap: 30px;
+            padding: 15px 0;
+            border-top: 1px solid #f0f0f0;
+            border-bottom: 1px solid #f0f0f0;
+            margin: 30px 0;
+        }
+        .interactive-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #666;
+            font-size: 16px;
+            cursor: pointer;
+            transition: color 0.3s ease;
+            background: transparent;
+            border: none;
+            padding: 0;
+        }
+        .interactive-btn:hover {
+            color: #6a11cb;
+        }
+        .interactive-btn i {
+            font-size: 18px;
+        }
+        .interactive-btn .num {
+            font-weight: 500;
+        }
+        .interactive-btn.comment-btn.active {
+            color: #6a11cb;
+        }
+        .interactive-btn.ai-btn.active {
+            color: #4080ff;
+        }
+
+        /* ===================== 核心：评论区样式 ===================== */
+        /* 1. 评论区容器：默认从右隐藏，点击展开 */
+        .comment-section {
+            position: absolute;
+            top: 0;
+            right: 0;
+            height: 100%;
+            width: 100%;
+            max-width: 650px;
+            background: #fff;
+            box-shadow: -4px 0 16px rgba(0, 0, 0, 0.08);
+            padding: 20px;
+            overflow-y: auto;
+            transform: translateX(100%);
+            transition: transform 0.35s ease;
+            z-index: 10;
+            display: block;
+        }
+        .comment-section.show {
+            transform: translateX(0);
+        }
+        /* 2. 评论区头部（标题+关闭按钮） */
+        .comments-header {
+            padding: 10px 0 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .comments-header h2 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+        }
+        .close-btn {
+            font-size: 24px;
+            color: #999;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+        .close-btn:hover {
+            color: #ff0050;
+        }
+        /* 3. 回复指示器（回复时显示） */
+        .replying-to {
+            background: #f8f8f8;
+            padding: 8px 15px;
+            font-size: 13px;
+            color: #666;
+            display: none;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        .replying-to.active {
+            display: flex;
+            justify-content: space-between;
+        }
+        .cancel-reply {
+            color: #999;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+        .cancel-reply:hover {
+            color: #ff0050;
+        }
+        /* 4. 评论列表容器 */
+        .comments-list {
+            margin-bottom: 20px;
+        }
+        /* 5. 单个评论样式 */
+        .comment {
+            padding: 15px 0;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+        }
+        .comment-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #ff0050;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+        .comment-content {
+            flex-grow: 1;
+        }
+        .comment-author {
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-size: 16px;
+            color: #333;
+        }
+        .comment-text {
+            margin-bottom: 8px;
+            line-height: 1.4;
+            font-size: 15px;
+            color: #555;
+        }
+        /* 6. 评论操作（时间、点赞、回复） */
+        .comment-actions {
+            display: flex;
+            color: #999;
+            font-size: 13px;
+        }
+        .comment-action {
+            margin-right: 15px;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+        .comment-action:hover {
+            color: #ff0050;
+        }
+        /* 7. 回复区样式 */
+        .replies {
+            margin-top: 10px;
+            padding-left: 20px;
+            border-left: 2px solid #f0f0f0;
+            display: none;
+        }
+        .replies.expanded {
+            display: block;
+        }
+        .toggle-replies {
+            color: #999;
+            font-size: 13px;
+            margin-top: 5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: color 0.3s ease;
+        }
+        .toggle-replies:hover {
+            color: #ff0050;
+        }
+        .toggle-replies i {
+            margin-right: 5px;
+            font-size: 12px;
+        }
+        .reply-to {
+            color: #ff0050;
+            font-weight: 500;
+        }
+        /* 8. 评论输入框样式（参考图片提示文案） */
+        .comment-input {
+            padding: 15px 0;
+            display: flex;
+            align-items: center;
+            border-top: 1px solid #eee;
+            background: #fafafa;
+            border-radius: 8px;
+            padding: 12px;
+        }
+        .input-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: #0095f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+        .input-field {
+            flex-grow: 1;
+            background: white;
+            border: 1px solid #eee;
+            border-radius: 20px;
+            padding: 10px 15px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+        .input-field:focus {
+            border-color: #ff0050;
+        }
+        .send-btn {
+            margin-left: 10px;
+            color: #ff0050;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 20px;
+            transition: background 0.3s ease;
+        }
+        .send-btn:hover {
+            background: rgba(255, 0, 80, 0.1);
+        }
+        /* 9. 评论折叠按钮（参考图片"X条评论被折叠"） */
+        .toggle-more-btn {
+            text-align: center;
+            color: #6a11cb;
+            cursor: pointer;
+            margin: 15px 0;
+            padding: 8px 12px;
+            border-radius: 4px;
+            background: #f0e6ff;
+            font-size: 14px;
+            transition: background 0.3s ease;
+        }
+        .toggle-more-btn:hover {
+            background: #e6d3ff;
+        }
+
+        /* ===================== AI问答区域样式 ===================== */
+        .ai-container {
+            margin-top: 30px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            background-color: #fff;
+            max-height: 0;
+            opacity: 0;
+            transition: max-height 0.5s ease, opacity 0.5s ease;
+        }
+
+        .ai-container.show {
+            max-height: 800px;
+            opacity: 1;
+        }
+
+        .chat-header {
+            padding: 16px 20px;
+            background-color: #4080ff;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-header .header-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .chat-header .header-avatar i {
+            color: #4080ff;
+            font-size: 18px;
+        }
+
+        .chat-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        /* 聊天内容区 */
+        .chat-output {
+            height: 500px;
+            padding: 24px 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            background-color: #fafbfc;
+        }
+
+        /* 滚动条优化 */
+        .chat-output::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-output::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+
+        .chat-output::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        .chat-output::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* 消息容器（包含头像和消息气泡） */
+        .message-wrapper {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            max-width: 80%;
+        }
+
+        /* 用户消息靠右 */
+        .message-wrapper.user {
+            margin-left: auto;
+            flex-direction: row-reverse;
+        }
+
+        /* 头像样式 */
+        .message-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background-color: #e2e8f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0; /* 防止头像被压缩 */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .message-avatar.user {
+            background-color: #4080ff;
+            color: white;
+        }
+
+        .message-avatar.bot {
+            background-color: #36d399;
+            color: white;
+        }
+
+        .message-avatar i {
+            font-size: 18px;
+        }
+
+        /* 消息气泡 */
+        .message {
+            padding: 12px 18px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            line-height: 1.5;
+            position: relative;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+        }
+
+        /* 用户消息气泡 */
+        .message.user {
+            background-color: #4080ff;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        /* AI消息气泡 */
+        .message.bot {
+            background-color: white;
+            color: #334155;
+            border-bottom-left-radius: 4px;
+            border: 1px solid #f1f5f9;
+        }
+
+        .message p {
+            margin: 0;
+            font-size: 15px;
+        }
+
+        /* 输入区优化 */
+        .chat-input-area {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            background-color: white;
+            border-top: 1px solid #f1f5f9;
+            gap: 10px;
+        }
+
+        #userInput {
+            flex-grow: 1;
+            padding: 14px 18px;
+            border: 1px solid #e2e8f0;
+            border-radius: 24px;
+            font-size: 15px;
+            color: #334155;
+            transition: all 0.2s ease;
+        }
+
+        #userInput:focus {
+            outline: none;
+            border-color: #4080ff;
+            box-shadow: 0 0 0 3px rgba(64, 128, 255, 0.1);
+        }
+
+        #userInput::placeholder {
+            color: #94a3b8;
+            font-size: 14px;
+        }
+
+        #sendButton {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background-color: #4080ff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        #sendButton:hover {
+            background-color: #3366cc;
+            transform: scale(1.05);
+        }
+
+        #sendButton:active {
+            transform: scale(0.98);
+        }
+
+        #sendButton i {
+            font-size: 18px;
+        }
+
+        /* 加载状态 */
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            color: #94a3b8;
+            font-size: 14px;
+        }
+
+        .loading-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #e2e8f0;
+            border-top-color: #4080ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* 响应式适配（小屏幕优化） */
+        @media (max-width: 768px) {
+            .author-bar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .author-stats {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            .blog-title {
+                font-size: 24px;
+            }
+            .blog-meta {
+                gap: 10px;
+            }
+            .interactive-bar {
+                gap: 15px;
+            }
+            /* 移动端评论区占满宽度 */
+            .comment-section {
+                max-width: 100%;
+            }
+
+            /* AI问答区域移动端适配 */
+            .chat-output {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- 博客卡片容器 -->
+    <div class="card">
+        <!-- 1. 作者信息区 -->
+        <div class="author-bar">
+            <div class="author-info">
+                <div class="author-avatar">大志</div>
+                <div class="author-meta">
+                    <div class="author-name">一只大志</div>
+                    <div class="author-stats">
+                        <span>码龄 <span class="num">1</span> 年</span>
+                        <span>点赞 <span class="num">207</span></span>
+                        <span>收藏 <span class="num">130</span></span>
+                        <span>粉丝 <span class="num">47</span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 2. 博客标题与元数据 -->
+        <h1 class="blog-title">JavaWeb中的Servlet</h1>
+        <div class="blog-meta">
+            <span><i class="fas fa-clock"></i> 原创于 2025-08-22 00:40:31</span>
+            <span><i class="fas fa-eye"></i> 1k 阅读</span>
+            <span><i class="fas fa-copyright"></i> CC 4.0 BY-SA 版权</span>
+            <span class="blog-stag">#servlet</span>
+        </div>
+        <!-- 3. 博客正文内容 -->
+        <div class="blog-content"></div>
+
+
+        <!-- 4. 交互图标区（点赞/评论/收藏/AI问答） -->
+        <div class="interactive-bar">
+            <button class="interactive-btn like-btn">
+                <i class="fas fa-thumbs-up"></i>
+                <span class="num">23</span>
+                <span>点赞</span>
+            </button>
+            <button class="interactive-btn comment-btn" id="commentToggle">
+                <i class="fas fa-comment"></i>
+                <span class="num">6</span>
+                <span>评论</span>
+            </button>
+            <button class="interactive-btn collect-btn">
+                <i class="fas fa-bookmark"></i>
+                <span class="num">14</span>
+                <span>收藏</span>
+            </button>
+            <button class="interactive-btn ai-btn" id="aiToggle">
+                <i class="fas fa-robot"></i>
+                <span>AI问答</span>
+            </button>
+        </div>
+
+        <!-- ===================== 核心：评论区（默认从右隐藏） ===================== -->
+        <div class="comment-section" id="commentSection">
+            <!-- 评论区头部（标题+关闭按钮） -->
+            <div class="comments-header">
+                <h2>评论区</h2>
+                <div class="close-btn" onclick="closeCommentSection()">&times;</div>
+            </div>
+            <!-- 回复指示器（回复时显示“回复@XXX”） -->
+            <div class="replying-to" id="replyingIndicator">
+                <span>回复：<span id="replyingToUser"></span></span>
+                <span class="cancel-reply" onclick="cancelReply()">取消回复</span>
+            </div>
+            <!-- 评论列表（JS动态生成） -->
+            <div class="comments-list" id="commentsList"></div>
+            <!-- 评论输入框（参考图片提示文案） -->
+            <div class="comment-input">
+                <div class="input-avatar">我</div>
+                <input type="text" class="input-field" id="commentInput" placeholder="欢迎高质量的评论，低质的评论会被折叠...">
+                <div class="send-btn" onclick="addComment()">发送</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== AI问答区域（默认隐藏） ===================== -->
+    <div class="ai-container" id="aiContainer">
+        <!-- 聊天头部 -->
+        <div class="chat-header">
+            <div class="header-avatar">
+                <i class="fas fa-comments"></i>
+            </div>
+            <h2>AI 智能问答</h2>
+        </div>
+
+        <!-- 聊天内容区 -->
+        <div class="chat-output" id="chatOutput">
+            <div class="message-wrapper bot">
+                <div class="message-avatar bot">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="message bot">
+                    <p>你好！我是通义千问AI,有什么问题都可以问我哦~</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 输入区 -->
+        <div class="chat-input-area">
+            <input type="text" id="userInput" placeholder="请输入你的问题..." autocomplete="off">
+            <button id="sendButton">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ===================== 评论区核心逻辑 =====================
+    // 1. 基础配置
+    const currentUser = "我"; // 当前登录用户
+    // 初始评论数据（含作者回复）
+    let comments = [];
+    let replyingTo = null; // 当前回复的评论ID
+    let replyingToRoot = false; // 是否回复顶级评论
+    let showAllComments = false; // 是否显示所有评论（控制折叠）
+
+    // 2. 页面加载初始化
+    document.addEventListener('DOMContentLoaded', () => {
+        // 从本地存储恢复评论（刷新后不丢失）
+        const storedComments = localStorage.getItem('blogComments');
+        if (storedComments) comments = JSON.parse(storedComments);
+        // 更新评论数量显示
+        updateCommentCount();
+    });
+
+    // 3. 评论区显示/隐藏控制
+    const commentToggle = document.getElementById('commentToggle');
+    const commentSection = document.getElementById('commentSection');
+    // 点击评论按钮展开
+    commentToggle.addEventListener('click', () => {
+        commentSection.classList.toggle('show');
+        commentToggle.classList.toggle('active');
+        if (commentSection.classList.contains('show')) renderComments();
+    });
+    // 关闭评论区
+    function closeCommentSection() {
+        commentSection.classList.remove('show');        commentToggle.classList.remove('active');
+    }
+
+    // 4. 渲染评论列表（含折叠功能）
+    function renderComments() {
+        const commentsList = document.getElementById('commentsList');
+        if (!commentsList) return;
+        commentsList.innerHTML = '';
+
+        // 筛选顶级评论 + 控制显示数量（默认5条，超出折叠）
+        const topComments = [...comments];
+        const displayComments = showAllComments ? topComments : topComments.slice(0, 5);
+        const isOverflow = topComments.length > 5;
+
+        // 渲染每条评论
+        displayComments.forEach(comment => {
+            // 生成评论元素
+            const commentEl = createCommentElement(comment, false);
+            commentsList.appendChild(commentEl);
+            // 生成回复区
+            if (comment.replies?.length) {
+                const repliesContainer = document.createElement('div');
+                repliesContainer.className = 'replies';
+                repliesContainer.id = `replies-${comment.id}`;
+                // 渲染回复
+                comment.replies.forEach(reply => {
+                    repliesContainer.appendChild(createCommentElement(reply, true));
+                });
+                commentsList.appendChild(repliesContainer);
+                // 回复展开/收起按钮
+                const toggleBtn = document.createElement('div');
+                toggleBtn.className = 'toggle-replies';
+                toggleBtn.innerHTML = `<i class="fas fa-chevron-down"></i> ${comment.replies.length}条回复`;
+                toggleBtn.onclick = () => toggleReplies(comment.id);
+                commentEl.appendChild(toggleBtn);
+            }
+        });
+
+        // 评论折叠/展开按钮（参考图片样式）
+        if (isOverflow) {
+            const toggleMoreBtn = document.createElement('div');
+            toggleMoreBtn.className = 'toggle-more-btn';
+            toggleMoreBtn.textContent = showAllComments ? '收起多余评论' : `${topComments.length - 5}条评论被折叠查看`;
+            toggleMoreBtn.onclick = () => {
+                showAllComments = !showAllComments;
+                renderComments();
+            };
+            commentsList.appendChild(toggleMoreBtn);
+        }
+    }
+
+    // 5. 创建单个评论/回复元素
+    function createCommentElement(data, isReply) {
+        const div = document.createElement('div');
+        div.className = 'comment';
+        div.id = `comment-${data.id}`;
+
+        // 评论HTML结构（含头像、作者、内容、操作）
+        let html = `
+            <div class="comment-avatar">${data.avatar}</div>
+            <div class="comment-content">
+                <div class="comment-author">${data.author}</div>
+        `;
+        // 回复显示“@回复对象”
+        if (data.replyTo) {
+            html += `<div class="comment-text">回复<span class="reply-to">@${data.replyTo}</span>：${data.content}</div>`;
+        } else {
+            html += `<div class="comment-text">${data.content}</div>`;
+        }
+        // 时间、点赞、回复操作
+        html += `
+                <div class="comment-actions">
+                    <div class="comment-action">${data.timestamp}</div>
+                    <div class="comment-action" onclick="likeComment(${data.id})"><i class="fas fa-heart"></i> 赞</div>
+                    <div class="comment-action" onclick="startReply(${data.id}, ${isReply}, '${data.author}')">回复</div>
+                </div>
+            </div>
+        `;
+        div.innerHTML = html;
+        return div;
+    }
+
+    // 6. 展开/收起回复
+    function toggleReplies(commentId) {
+        const container = document.getElementById(`replies-${commentId}`);
+        const btn = document.querySelector(`#comment-${commentId} .toggle-replies`);
+        if (!container || !btn) return;
+
+        if (container.classList.contains('expanded')) {
+            container.classList.remove('expanded');
+            btn.innerHTML = `<i class="fa fa-chevron-down"></i> ${container.children.length}条回复`;
+        } else {
+            container.classList.add('expanded');
+            btn.innerHTML = `<i class="fas fa-chevron-up"></i> 收起回复`;
+        }
+    }
+
+    // 7. 开始回复（显示回复指示器）
+    function startReply(commentId, isReply, author) {
+        replyingTo = commentId;
+        replyingToRoot = !isReply;
+        const indicator = document.getElementById('replyingIndicator');
+        const userEl = document.getElementById('replyingToUser');
+        userEl.textContent = author;
+        indicator.classList.add('active');
+        document.getElementById('commentInput').focus();
+    }
+
+    // 8. 取消回复
+    function cancelReply() {
+        replyingTo = null;
+        document.getElementById('replyingIndicator').classList.remove('active');
+    }
+
+    // 9. 发送评论/回复
+    function addComment() {
+        const input = document.getElementById('commentInput');
+        const content = input.value.trim();
+        if (!content) return;
+
+        if (replyingTo) {
+            // 发送回复
+            const newReply = {
+                id: Date.now(),
+                author: currentUser,
+                avatar: "我",
+                content: content,
+                timestamp: "刚刚",
+                replyTo: replyingToRoot ? findCommentAuthor(replyingTo) : findReplyAuthor(replyingTo)
+            };
+            // 找到对应评论并添加回复
+            comments.forEach(comment => {
+                if (comment.id === replyingTo) {
+                    comment.replies = comment.replies || [];
+                    comment.replies.push(newReply);
+                } else if (comment.replies?.some(r => r.id === replyingTo)) {
+                    comment.replies.push(newReply);
+                }
+            });
+            // 展开回复区
+            if (replyingToRoot) {
+                const container = document.getElementById(`replies-${replyingTo}`);
+                if (container && !container.classList.contains('expanded')) {
+                    toggleReplies(replyingTo);
+                }
+            }
+            cancelReply();
+        } else {
+            // 发送新顶级评论
+            const newComment = {
+                id: Date.now(),
+                author: currentUser,
+                avatar: "我",
+                content: content,
+                timestamp: "刚刚",
+                replies: []
+            };
+            comments.unshift(newComment);
+        }
+
+        // 重置输入框+重新渲染+保存数据
+        input.value = '';
+        renderComments();
+        saveComments();
+        updateCommentCount();
+    }
+
+    // 10. 点赞功能（切换图标颜色）
+    function likeComment(commentId) {
+        const icon = document.querySelector(`#comment-${commentId} .fa-heart, #comment-${commentId} .fa-heart`);
+        if (!icon) return;
+
+        if (icon.classList.contains('fa-heart-o')) {
+            icon.classList.remove('fa-heart-o');
+            icon.classList.add('fa-heart');
+            icon.style.color = '#ff0050';
+        } else {
+            icon.classList.remove('fa-heart');
+            icon.classList.add('fa-heart');
+            icon.style.color = '';
+        }
+    }
+
+    // 11. 辅助函数：查找评论作者
+    function findCommentAuthor(commentId) {
+        const comment = comments.find(c => c.id === commentId);
+        return comment ? comment.author : '';
+    }
+    // 辅助函数：查找回复作者
+    function findReplyAuthor(replyId) {
+        for (const comment of comments) {
+            if (comment.replies) {
+                const reply = comment.replies.find(r => r.id === replyId);
+                if (reply) return reply.author;
+            }
+        }
+        return '';
+    }
+
+    // 12. 按Enter发送评论
+    document.getElementById('commentInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            addComment();
+        }
+    });
+
+    // 13. 保存评论到本地存储（刷新不丢失）
+    function saveComments() {
+        localStorage.setItem('blogComments', JSON.stringify(comments));
+    }
+
+    // 14. 更新评论数量显示
+    function updateCommentCount() {
+        document.querySelector('.comment-btn .num').textContent = comments.length;
+    }
+
+    // ===================== 原有点赞/收藏交互 =====================
+    document.querySelector('.like-btn').addEventListener('click', function() {
+        const numEl = this.querySelector('.num');
+        let num = parseInt(numEl.textContent);
+        if (this.style.color === 'rgb(106, 17, 203)') {
+            numEl.textContent = num - 1;
+            this.style.color = '#666';
+        } else {
+            numEl.textContent = num + 1;
+            this.style.color = '#6a11cb';
+        }
+    });
+    document.querySelector('.collect-btn').addEventListener('click', function() {
+        const numEl = this.querySelector('.num');
+        let num = parseInt(numEl.textContent);
+        if (this.style.color === 'rgb(106, 17, 203)') {
+            numEl.textContent = num - 1;
+            this.style.color = '#666';
+        } else {
+            numEl.textContent = num + 1;
+            this.style.color = '#6a11cb';
+        }
+    });
+
+    // ===================== AI问答功能 =====================
+    // AI问答显示/隐藏控制
+    const aiToggle = document.getElementById('aiToggle');
+    const aiContainer = document.getElementById('aiContainer');
+
+    aiToggle.addEventListener('click', () => {
+        aiContainer.classList.toggle('show');
+        aiToggle.classList.toggle('active');
+        // 显示时让输入框获得焦点
+        if (aiContainer.classList.contains('show')) {
+            document.getElementById('userInput').focus();
+        }
+    });
+
+    // AI问答功能实现
+    const userInput = document.getElementById('userInput');
+    const sendButton = document.getElementById('sendButton');
+    const chatOutput = document.getElementById('chatOutput');
+
+    // 替换为你的 SiliconFlow API 密钥
+    const API_KEY = 'sk-zegjjoqfilnkcgmuhpcpkayxjvxxwjsoykfidpkwkbuwybuv';
+    const API_ENDPOINT = 'https://api.siliconflow.cn/v1/chat/completions';
+
+    // 添加加载状态
+    function addLoadingState() {
+        const loadingWrapper = document.createElement('div');
+        loadingWrapper.classList.add('message-wrapper', 'bot');
+        loadingWrapper.id = 'loadingState';
+
+        const avatar = document.createElement('div');
+        avatar.classList.add('message-avatar', 'bot');
+        avatar.innerHTML = '<i class="fas fa-robot"></i>';
+
+        const loadingDiv = document.createElement('div');
+        loadingDiv.classList.add('loading');
+        loadingDiv.innerHTML = `
+            <div class="loading-spinner"></div>
+            <span>AI 正在思考...</span>
+        `;
+
+        loadingWrapper.appendChild(avatar);
+        loadingWrapper.appendChild(loadingDiv);
+        chatOutput.appendChild(loadingWrapper);
+        chatOutput.scrollTop = chatOutput.scrollHeight;
+    }
+
+    // 移除加载状态
+    function removeLoadingState() {
+        const loadingState = document.getElementById('loadingState');
+        if (loadingState) loadingState.remove();
+    }
+
+    // 添加消息到聊天界面
+    function addMessage(message, sender) {
+        const messageWrapper = document.createElement('div');
+        messageWrapper.classList.add('message-wrapper', sender);
+
+        // 头像元素
+        const avatar = document.createElement('div');
+        avatar.classList.add('message-avatar', sender);
+        if (sender === 'user') {
+            avatar.innerHTML = '<i class="fas fa-user"></i>';
+        } else {
+            avatar.innerHTML = '<i class="fas fa-robot"></i>';
+        }
+
+        // 消息气泡
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message', sender);
+
+        const messageP = document.createElement('p');
+        messageP.textContent = message;
+        messageDiv.appendChild(messageP);
+
+        // 组装消息容器
+        messageWrapper.appendChild(avatar);
+        messageWrapper.appendChild(messageDiv);
+
+        chatOutput.appendChild(messageWrapper);
+        chatOutput.scrollTop = chatOutput.scrollHeight;
+    }
+
+    // 调用 SiliconFlow API 获取 AI 回复
+    async function getAiResponse(userQuestion) {
+        const requestBody = {
+            "model": "Qwen/QwQ-32B",
+            "messages": [{"role": "user", "content": userQuestion}]
+        };
+
+        try {
+            const response = await fetch(API_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${API_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(`请求失败: ${errorData.error?.message || response.statusText}`);
+            }
+
+            const data = await response.json();
+            if (data.choices && data.choices[0]?.message?.content) {
+                return data.choices[0].message.content;
+            } else {
+                return "抱歉，AI 未能返回有效回复";
+            }
+
+        } catch (error) {
+            console.error('API 调用错误:', error);
+            return `通信错误: ${error.message}`;
+        }
+    }
+
+    // 处理发送逻辑
+    async function handleSend() {
+        const userMessage = userInput.value.trim();
+        if (!userMessage) return;
+
+        // 添加用户消息
+        addMessage(userMessage, 'user');
+        userInput.value = '';
+
+        // 显示加载状态
+        addLoadingState();
+
+        // 获取AI回复并显示
+        const aiReply = await getAiResponse(userMessage);
+        removeLoadingState(); // 移除加载
+        addMessage(aiReply, 'bot');
+    }
+
+
+    // 在blog.html的DOM加载完成后执行
+    document.addEventListener('DOMContentLoaded', async () => {
+        // 1. 初始化全局评论数组
+        window.comments = [];
+
+        // 2. 获取当前博客的articleId（用于关联后端评论）
+        const params = new URLSearchParams(window.location.search);
+        const articleId = params.get('article');
+
+        if (articleId) {
+            try {
+                // 3. 调用后端接口，获取包含评论List的响应
+                const response = await axios.get(`http://localhost:8881/JavaWeb/blog?id=${articleId}`);
+                const article = response.data.article;
+                // 后端返回的评论List集合（核心：直接接收List，无需额外处理）
+                const backendCommentList = response.data.comments || [];
+
+                console.log("评论区数据:"+backendCommentList[0].content);
+
+                // 4. 更新博客正文内容（原有逻辑不变）
+                if (article) {
+                    updateBlogContent(article);
+                }
+
+                // 5. 处理评论List：转换为前端层级结构→赋值给全局comments
+                if (backendCommentList.length > 0) {
+                    window.comments = convertBackendCommentList(backendCommentList);
+                    // 可选：将后端评论保存到localStorage，刷新后保留
+                    saveComments();
+                } else {
+                    // 后端List为空时，尝试从localStorage恢复本地评论
+                    const storedComments = localStorage.getItem('blogComments');
+                    if (storedComments) {
+                        window.comments = JSON.parse(storedComments);
+                    }
+                }
+
+                comments = convertBackendCommentList(backendCommentList);
+                renderComments();
+
+            } catch (error) {
+                console.error('加载博客/评论失败:', error);
+                // 出错时从localStorage恢复评论，保证页面可用
+                const storedComments = localStorage.getItem('blogComments');
+                if (storedComments) {
+                    window.comments = JSON.parse(storedComments);
+                }
+            }
+        } else {
+            // 无articleId时，从localStorage恢复评论
+            const storedComments = localStorage.getItem('blogComments');
+            if (storedComments) {
+                window.comments = JSON.parse(storedComments);
+            }
+        }
+
+        // 6. 更新评论区数量显示
+        updateCommentCount();
+    });
+
+
+    function convertBackendCommentList(backendCommentList) {
+        if (!backendCommentList || backendCommentList.length === 0) {
+            return []; // 空List返回空数组，避免渲染错误
+        }
+
+        // 1. 构建「评论ID→评论对象」的映射表（快速查找父评论）
+        const commentMap = new Map();
+        // 2. 存储最终的顶级评论数组（root_id为null/0的评论）
+        const topLevelComments = [];
+
+        // 第一遍遍历：初始化所有评论的基础属性（不含replies）
+        backendCommentList.forEach(backendComment => {
+            // 处理评论者名称（优先用后端返回的user_name，无则用"用户+user_id"兜底）
+            const commentAuthor = backendComment.user_name
+                ? backendComment.user_name
+                : `用户${backendComment.user_id}`;
+
+            // 处理被回复者名称（to_user_id不为null时才需要）
+            const replyToAuthor = backendComment.to_user_id
+                ? (backendComment.to_user_name || `用户${backendComment.to_user_id}`)
+                : '';
+
+            // 构建前端评论对象（严格对齐原有comments数组的结构，确保渲染兼容）
+            const frontComment = {
+                id: backendComment.id,                  // 评论唯一ID（后端返回）
+                author: commentAuthor,                  // 评论者名称
+                avatar: commentAuthor.substring(0, 1).toUpperCase(), // 头像：首字母大写
+                content: backendComment.content || '',  // 评论内容（兜底空字符串）
+                timestamp: formatCommentTime(backendComment.create_time), // 时间格式化
+                replies: [],                            // 嵌套回复（后续填充）
+                replyTo: replyToAuthor                  // 被回复者名称（无则为空）
+            };
+
+            // 存入映射表，方便后续关联回复
+            commentMap.set(backendComment.id, frontComment);
+
+            // 识别顶级评论：root_id为null、0或未定义的评论
+            const isTopLevel = !backendComment.root_id || backendComment.root_id === 0;
+            if (isTopLevel) {
+                topLevelComments.push(frontComment);
+            }
+        });
+
+        // 第二遍遍历：将回复关联到对应的顶级评论
+        backendCommentList.forEach(backendComment => {
+            // 仅处理"回复"（root_id不为null/0，且能找到对应的顶级评论）
+            const isReply = backendComment.root_id && backendComment.root_id !== 0;
+            if (isReply) {
+                // 从映射表中找到当前回复对应的顶级评论
+                const topComment = commentMap.get(backendComment.root_id);
+                // 从映射表中找到当前回复对象
+                const currentReply = commentMap.get(backendComment.id);
+                // 确保顶级评论和回复都存在，避免报错
+                if (topComment && currentReply) {
+                    topComment.replies.push(currentReply);
+                }
+            }
+        });
+
+        return topLevelComments;
+    }
+
+
+    //调整显示的时间
+    function formatCommentTime(datetimeStr) {
+        if (!datetimeStr) return '未知时间';
+        const createTime = new Date(datetimeStr);
+        const now = new Date();
+        const diffMs = now - createTime;
+
+
+        const seconds = Math.floor(diffMs / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+
+        if (seconds < 60) return '刚刚';
+        if (minutes < 60) return `${minutes}分钟前`;
+        if (hours < 24) return `${hours}小时前`;
+        if (days < 30) return `${days}天前`;
+        // 超过30天显示标准日期
+        return `${createTime.getFullYear()}-${(createTime.getMonth()+1).toString().padStart(2, '0')}-${createTime.getDate().toString().padStart(2, '0')}`;
+    }
+
+    // 更新博客页面内容的函数
+    function updateBlogContent(article) {
+        // 更新标题
+        document.querySelector('.blog-title').textContent = article.article_title || '文章标题加载失败'; // 添加默认值
+
+        // 1. 更新原创日期
+        const dateSpan = document.querySelector('.blog-meta span:nth-of-type(1)'); // 假设日期是第一个 span
+        if (dateSpan && dateSpan.querySelector('i')) { // 确保 span 和里面的 i 都存在
+            dateSpan.querySelector('i').className = 'fas fa-clock'; // 明确设置新类名
+            dateSpan.querySelector('i').outerHTML = `<i class="fas fa-clock"></i>`; // 替换整个 icon 元素，确保类名正确
+            dateSpan.firstChild.nextSibling.textContent = ` 原创于 ${formatDate(article.article_date)}`; // 更新文本内容，注意空格
+        } else if (dateSpan) { // 如果 i 标签不存在，直接设置 innerHTML
+            dateSpan.innerHTML = `<i class="fas fa-clock"></i> 原创于 ${formatDate(article.article_date)}`;
+        }
+
+
+        // 更新阅读数
+        const viewSpan = document.querySelector('.blog-meta span:nth-of-type(2)'); // 假设阅读数是第二个 span
+        if (viewSpan && viewSpan.querySelector('i')) {
+            viewSpan.querySelector('i').className = 'fas fa-eye';
+            viewSpan.querySelector('i').outerHTML = `<i class="fas fa-eye"></i>`;
+            viewSpan.firstChild.nextSibling.textContent = ` ${article.article_view} 阅读`;
+        } else if (viewSpan) {
+            viewSpan.innerHTML = `<i class="fas fa-eye"></i> ${article.article_view} 阅读`;
+        }
+
+
+        // 3. 更新版权信息
+        const copyrightSpan = document.querySelector('.blog-meta span:nth-of-type(3)');
+        if (copyrightSpan && copyrightSpan.querySelector('i')) {
+            copyrightSpan.querySelector('i').className = 'fas fa-copyright';
+            copyrightSpan.querySelector('i').outerHTML = `<i class="fas fa-copyright"></i>`;
+            copyrightSpan.firstChild.nextSibling.textContent = ` CC 4.0 BY-SA 版权`;
+        } else if (copyrightSpan) {
+            copyrightSpan.innerHTML = `<i class="fas fa-copyright"></i> CC 4.0 BY-SA 版权`;
+        }
+
+
+        // 更新正文内容
+        // 检查 article.article_content 是否存在，如果不存在则显示提示信息
+        document.querySelector('.blog-content').innerHTML = article.article_content || '<p>文章内容加载失败或为空。</p>';
+
+        // 更新作者信息 (如果article对象中有这些属性)
+        if (article.author) {
+            document.querySelector('.author-name').textContent = article.author;
+            const firstLetter = article.author.substring(0, 1).toUpperCase(); // 确保是大写
+            const authorAvatar = document.querySelector('.author-avatar');
+            if (authorAvatar) authorAvatar.textContent = firstLetter;
+        }
+
+        // 更新互动数据
+        // 再次检查 article 对象是否包含这些属性，以防后端返回不全
+        document.querySelector('.like-btn .num').textContent = article.article_like ?? '0'; // 使用 nullish coalescing operator 提供 defaults
+        document.querySelector('.comment-btn .num').textContent = article.article_comments_count ?? '0';
+        document.querySelector('.collect-btn .num').textContent = article.collectCount ?? '0'; // 如果 article.collectCount 存在
+    }
+
+    // 辅助函数：格式化日期
+    function formatDate(timestamp) {
+        const date = new Date(timestamp);
+        return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
+    }
+
+    // 绑定事件
+    sendButton.addEventListener('click', handleSend);
+    userInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+        }
+    });
+
+</script>
+</body>
+</html>

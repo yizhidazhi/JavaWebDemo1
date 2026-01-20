@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <title>博客个人主页 - 资料编辑</title>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js" type="module"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    }
+
+    body {
+      background-color: #f5f7fa;
+      color: #333;
+      line-height: 1.6;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 3fr;
+      gap: 20px;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .main-content {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      padding: 24px;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    .profile-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .avatar-container {
+      position: relative;
+      margin-right: 20px;
+    }
+
+    .avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid #fff;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 32px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .avatar:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .avatar-edit {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      background: #6a11cb;
+      color: white;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+
+    .profile-info h1 {
+      font-size: 24px;
+      margin-bottom: 5px;
+      color: #1a1a1a;
+    }
+
+    .stats {
+      display: flex;
+      gap: 15px;
+      margin: 15px 0;
+    }
+
+    .stat-item {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 18px;
+      font-weight: bold;
+      color: #1e88e5;
+    }
+
+    .stat-label {
+      font-size: 14px;
+      color: #666;
+    }
+
+    .ip-info {
+      color: #666;
+      font-size: 14px;
+      margin: 10px 0;
+    }
+
+    .join-date {
+      color: #888;
+      font-size: 13px;
+    }
+
+    .bio {
+      margin: 15px 0;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border-left: 4px solid #6a11cb;
+    }
+
+    h2 {
+      font-size: 20px;
+      margin-bottom: 15px;
+      color: #333;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+
+    /* 头像设置面板 */
+    .avatar-settings {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+    }
+
+    .avatar-options {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .option-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .option-group label {
+      font-weight: bold;
+      font-size: 14px;
+      color: #555;
+    }
+
+    .option-group input[type="text"],
+    .option-group input[type="file"] {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .option-group input[type="file"] {
+      padding: 8px;
+    }
+
+    .btn {
+      padding: 10px 15px;
+      background: #6a11cb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.3s;
+    }
+
+    .btn:hover {
+      background: #5a0fb8;
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid #6a11cb;
+      color: #6a11cb;
+    }
+
+    .btn-outline:hover {
+      background: #f0e6ff;
+    }
+
+    .avatar-preview {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 15px 0;
+    }
+
+    .preview-title {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 10px;
+    }
+
+    .avatar-preview-img {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid #fff;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    /* 编辑资料面板样式 */
+    .edit-profile-settings {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+    }
+
+    .profile-options {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .option-group label {
+      font-weight: bold;
+      font-size: 14px;
+      color: #555;
+      margin-bottom: 5px;
+    }
+
+    .option-group input[type="text"],
+    .option-group select,
+    .option-group textarea {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      width: 100%;
+    }
+
+    .option-group textarea {
+      resize: vertical;
+    }
+
+    .option-group input[disabled] {
+      background-color: #f8f9fa;
+      cursor: not-allowed;
+    }
+
+    /* 博客条目鼠标悬停效果 */
+    .blog-item {
+      transition: background-color 0.3s ease;
+      padding: 15px;
+      border-radius: 8px;
+    }
+
+    .blog-item:hover {
+      background-color: #f0f7ff; /* 浅蓝色背景 */
+    }
+
+    .blog-item:hover h3 a {
+      color: #6a11cb; /* 链接变色 */
+    }
+
+    .blog-item:hover p {
+      color: #444; /* 文本颜色加深 */
+    }
+
+    /* 响应式设计 */
+    @media (max-width: 900px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <!-- 左侧边栏 -->
+  <div class="sidebar">
+    <!-- 个人信息卡片 -->
+    <div class="card">
+      <div class="profile-header">
+        <div class="avatar-container">
+          <div class="avatar" id="userAvatar">
+            大志
+          </div>
+          <div class="avatar-edit" onclick="openAvatarSettings()">
+            ✎
+          </div>
+        </div>
+        <div class="profile-info">
+          <h1 id="name">一只大志</h1>
+          <div class="ip-info">IP 属性：湖南省</div>
+          <div class="join-date">加入时间：2024-10-17</div>
+          <div id="genderIcon" style="margin-top: 5px; font-size: 20px;"></div>
+        </div>
+      </div>
+
+      <!-- 编辑资料按钮 -->
+      <button class="btn btn-outline" onclick="openEditProfile()" style="margin-bottom: 10px;">编辑资料</button>
+
+      <div class="stats">
+        <div class="stat-item">
+          <div class="stat-value">11,579</div>
+          <div class="stat-label">总访问量</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">11</div>
+          <div class="stat-label">原创</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">47</div>
+          <div class="stat-label">粉丝</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">13</div>
+          <div class="stat-label">关注</div>
+        </div>
+      </div>
+
+      <div class="bio">
+        <strong >个人简介：</strong>
+        <div id="description">应当学好计算机语言、数据结构、算法、操作系统、网络、数据库，以及实战项目</div>
+      </div>
+
+      <!-- 头像设置面板 (默认隐藏) -->
+      <div class="avatar-settings" id="avatarSettings" style="display: none;">
+        <h2>头像设置</h2>
+
+        <div class="avatar-preview">
+          <div class="preview-title">预览</div>
+          <img src="" class="avatar-preview-img" id="avatarPreview" alt="头像预览">
+        </div>
+
+        <div class="avatar-options">
+          <div class="option-group">
+            <label>上传新头像</label>
+            <input type="file" id="avatarUpload" accept="image/*">
+            <button class="btn btn-outline" onclick="document.getElementById('avatarUpload').click()">选择图片</button>
+          </div>
+
+          <div class="option-group">
+            <button class="btn" onclick="saveAvatar()">保存头像</button>
+            <button class="btn btn-outline" onclick="closeAvatarSettings()">取消</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 编辑资料面板 (默认隐藏) -->
+      <div class="edit-profile-settings" id="editProfileSettings" style="display: none;">
+        <h2>编辑个人资料</h2>
+        <div class="profile-options">
+          <div class="option-group">
+            <label for="nickname">用户昵称</label>
+            <input type="text" id="nickname" value="一只大志">
+          </div>
+          <div class="option-group">
+            <label for="userID">用户ID</label>
+            <input type="text" id="userID" value="2401_88195314" disabled>
+          </div>
+          <div class="option-group">
+            <label for="gender">性别</label>
+            <select id="gender">
+              <option value="男" selected>男</option>
+              <option value="女">女</option>
+            </select>
+          </div>
+          <div class="option-group">
+            <label for="bio">个人简介</label>
+            <textarea id="bio" rows="4">一个合格的程序员要掌握计算机语言、数据结构、算法、操作系统、网络、数据库、以及实战项目</textarea>
+          </div>
+          <div class="option-group">
+            <button class="btn" onclick="saveProfile()">保存资料</button>
+            <button class="btn btn-outline" onclick="closeEditProfile()">取消</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 个人成就卡片 -->
+    <div class="card">
+      <h2>个人成就</h2>
+      <div class="stats">
+        <div class="stat-item">
+          <div class="stat-value">207</div>
+          <div class="stat-label">获得点赞</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">0</div>
+          <div class="stat-label">内容评论</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">130</div>
+          <div class="stat-label">获得收藏</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">74,808</div>
+          <div class="stat-label">博客排名</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右侧主内容区 -->
+  <div class="main-content">
+    <!-- 文章列表 -->
+    <!-- 文章列表 -->
+    <div class="card">
+      <h2>最新文章</h2>
+      <div id="articlesContainer">
+        <!-- 文章将通过JavaScript动态生成 -->
+      </div>
+    </div>
+
+
+    <!-- 愿力等级卡片 -->
+    <div class="card">
+      <h2>愿力等级</h2>
+
+      <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+        <thead>
+        <tr style="background-color: #f8f9fa;">
+          <th style="padding: 12px; border: 1px solid #eee;">愿力等级</th>
+          <th style="padding: 12px; border: 1px solid #eee;">愿力分</th>
+          <th style="padding: 12px; border: 1px solid #eee;">本月获得</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td style="padding: 12px; border: 1px solid #eee; text-align: center;">1</td>
+          <td style="padding: 12px; border: 1px solid #eee; text-align: center;">0</td>
+          <td style="padding: 12px; border: 1px solid #eee; text-align: center;">30</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 当前头像状态
+  let currentAvatar = null;
+  // 打开头像设置面板
+  function openAvatarSettings() {
+    document.getElementById('avatarSettings').style.display = 'block';
+    // 初始化预览为当前头像
+    const avatar = document.getElementById('userAvatar');
+    if (avatar.style.backgroundImage) {
+      document.getElementById('avatarPreview').src = avatar.style.backgroundImage.replace('url("', '').replace('")', '');
+    } else {
+      document.getElementById('avatarPreview').src = '';
+    }
+  }
+
+  // 关闭头像设置面板
+  function closeAvatarSettings() {
+    document.getElementById('avatarSettings').style.display = 'none';
+    // 重置表单
+    document.getElementById('avatarUpload').value = '';
+  }
+
+  // 处理上传的图片
+  document.getElementById('avatarUpload').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.type.match('image.*')) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          document.getElementById('avatarPreview').src = e.target.result;
+          currentAvatar = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      } else {
+        alert('请选择图片文件');
+      }
+    }
+  });
+
+  // 保存头像
+  async function saveAvatar() {
+    if (currentAvatar) {
+      const avatar = document.getElementById('userAvatar');
+      let formData = new FormData();
+      if (currentAvatar.startsWith('data:image')) { // 如果是 base64 dataURL，说明是文件上传
+        // 从dataURL中提取图片数据并转换为File对象
+        let base64Data = currentAvatar.split(',')[1];
+        let byteCharacters = atob(base64Data);
+        let byteArrays = [];
+        for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+          let slice = byteCharacters.slice(offset, offset + 512);
+          let byteNumbers = new Array(slice.length);
+          for (let i = 0; i < slice.length; i++) {
+            byteNumbers[i] = slice.charCodeAt(i);
+          }
+          let byteArray = new Uint8Array(byteNumbers);
+          byteArrays.push(byteArray);
+        }
+        let file = await dataURLtoFile(currentAvatar, "avatar.png");
+        formData.append('avatar', file); // 将文件添加到 FormData
+      }
+
+      avatar.innerHTML = ''; // 清除文本内容
+      // 设置背景图片
+      avatar.style.backgroundImage = `url("${currentAvatar}")`;
+      avatar.style.backgroundSize = 'cover';
+      avatar.style.backgroundPosition = 'center';
+      try {
+        const response = await axios.post("http://localhost:8881/JavaWeb/Avatar", formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data' // 告诉服务器这是文件上传
+          }
+        });
+        console.log(response.data);
+        if (response.data.success) {
+          alert('头像设置成功！');
+          closeAvatarSettings();
+        } else {
+          alert('头像上传失败: ' + response.data.message);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    } else {
+      alert('请先选择或上传头像');
+    }
+  }
+
+  // 将 DataURL 转换为 File 对象
+  async function dataURLtoFile(dataurl, filename) {
+    let arr = dataurl.split(',');
+    let mime = arr[0].match(/:(.*?);/)[1];
+    let bstr = atob(arr[1]);
+    let n = bstr.length;
+    let u8arr = new Uint8Array(n);
+    while(n--){
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, {type:mime});
+  }
+
+  // 实时更新头像显示（包括 userAvatar 和 avatarPreview）
+  function updateAvatarDisplay(url) {
+    const avatarElement = document.getElementById('userAvatar');
+    const avatarPreviewElement = document.getElementById('avatarPreview');
+
+    avatarElement.innerHTML = ''; // 清除用户名的首字母
+    avatarElement.style.backgroundImage = `url("${url}")`;
+    avatarElement.style.backgroundSize = 'cover';
+    avatarElement.style.backgroundPosition = 'center';
+    if (avatarPreviewElement) {
+      avatarPreviewElement.src = url;
+    }
+    currentAvatar = url; // 同步更新 currentAvatar
+  }
+
+
+  // 打开编辑资料面板
+  function openEditProfile() {
+    document.getElementById('editProfileSettings').style.display = 'block';
+  }
+
+  // 关闭编辑资料面板
+  function closeEditProfile() {
+    document.getElementById('editProfileSettings').style.display = 'none';
+  }
+
+  // 保存资料
+  async function saveProfile() {
+    const name = document.getElementById('nickname').value;
+    const bio = document.getElementById('bio').value;
+    const gender = document.getElementById('gender').value;
+
+    console.log(bio);
+
+    const params = new URLSearchParams();
+    params.append('name', name);
+    params.append('description', bio);
+    params.append('gender', gender);
+
+    try {
+      const response = await axios.post(
+              "http://localhost:8881/JavaWeb/resource",
+              params,
+              {
+                headers: {
+                  'Content-Type': 'application/x-www-form-urlencoded'
+                }
+              }
+      );
+      if (response.data.success) {
+        alert('资料保存成功！');
+        closeEditProfile();
+        // 更新页面上的个人简介显示
+        document.getElementById('description').innerText = bio;
+        document.getElementById('name').innerText = name;
+        // 更新性别图标
+        const genderIcon = document.getElementById('genderIcon');
+        if (genderIcon) {
+          if (gender === '男') {
+            genderIcon.innerHTML = '♂';
+            genderIcon.style.color = 'dodgerblue';
+          } else if (gender === '女') {
+            genderIcon.innerHTML = '♀';
+            genderIcon.style.color = 'hotpink';
+          }
+        } else {
+          alert('资料保存失败：' + response.data.message);
+        }
+      } else {
+        alert('资料保存失败：' + response.data.message);
+      }
+    } catch (error) {
+      console.error('保存资料时发生错误：', error);
+      alert('保存资料失败，请稍后重试');
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    // 检查登录状态（示例逻辑，实际需对接后端）
+    checkLogin();
+    // 监听storage事件，多标签页同步登录状态
+    window.addEventListener('storage', function(e) {
+      if (e.key === 'IsLoginIn' || e.key === 'UserAvatar') {
+        checkLogin();
+      }
+    });
+
+
+  });
+
+  // 检查登录状态
+  async function checkLogin() {
+    try {
+      const res = await axios.get("http://localhost:8881/JavaWeb/MyPage");
+      let isLoginIn = res.data.isLogin;
+      let avatar = res.data.avatar;
+      let name = res.data.name;
+      let description = res.data.description;
+      let gender = res.data.gender;
+      let account = res.data.account;
+
+
+      console.log(isLoginIn);
+      console.log(avatar);
+      console.log(name);
+      console.log(description);
+      console.log(gender);
+      console.log(account);
+
+
+      function renderArticles(articles, labels) {
+        const container = document.getElementById('articlesContainer');
+        container.innerHTML = '';
+
+        // 遍历文章和标签，两者一一对应
+        articles.forEach((article, index) => {
+          // 获取对应标签，确保索引存在
+          const articleLabels = labels[index] || [];
+
+          // 创建文章项
+          const articleItem = document.createElement('div');
+          articleItem.className = 'blog-item';
+          articleItem.style.marginTop = '20px';
+          if (index > 0) {
+            articleItem.style.paddingTop = '20px';
+            articleItem.style.borderTop = '1px solid #eee';
+          }
+
+          // 构建标签HTML
+          let tagsHtml = '';
+          console.log("id是这个:"+article.article_id);
+
+          if (articleLabels.length > 0) {
+            tagsHtml = '<div class="article-tags" style="margin: 5px 0;">';
+            articleLabels.forEach(tag => {
+              // 携带文章ID参数到blog页面
+              tagsHtml += `<a href="blog.html?articleId=${article.article_id}&tag=${encodeURIComponent(tag)}" class="blog-tag" style="margin-right: 5px; text-decoration: none;">#${tag}</a>`;
+            });
+            tagsHtml += '</div>';
+          }
+
+          console.log("标签的描述："+articleLabels.label_description)
+
+          //将毫秒数转化为年月日
+          const date = new Date(article.article_date);
+          const year = date.getFullYear();
+          const month = ('0' + (date.getMonth() + 1)).slice(-2); // 月份从0开始，所以+1，并补零
+          const day = ('0' + date.getDate()).slice(-2);// 补零
+          const realDate = year + '.' + month + '.' + day;
+
+          // 设置文章项内容
+          articleItem.innerHTML = `
+      <h3><a href="blog.html?article=${article.article_id}" style="text-decoration: none; color: #333;">${article.article_title}</a></h3>
+      ${tagsHtml}
+      <p style="color: #666; margin: 10px 0;">${realDate} · ${article.article_view} 阅读 · ${article.article_like} 点赞 · ${article.article_comments_count} 收藏</p>
+      <p>${articleLabels.label_description}</p>
+    `;
+          container.appendChild(articleItem);
+        });
+      }// 在原有获取数据的地方调用渲染函数
+
+      axios({
+        method: 'POST',
+        url:"http://localhost:8881/JavaWeb/MyPage",
+        data: JSON.stringify({account: account}),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).then(response => {
+        const responseData = response.data;
+        if (responseData.success) {
+          const labels = responseData.labels;
+          const articles = responseData.articles;
+          // 调用渲染函数
+          renderArticles(articles, labels);
+        } else {
+          console.log("响应数据失败");
+        }
+      }).catch(error => {
+        console.log(error);
+      });
+
+      const editName = document.getElementById('nickname');
+      const currentName = document.getElementById('name');
+      const editDescription = document.getElementById('bio');
+      const currentDescription = document.getElementById('description');
+      const genderIcon = document.getElementById('genderIcon');
+      const genderSelect = document.getElementById('gender');
+
+      if (isLoginIn) {
+        // 拼接正确的头像访问路径（示例逻辑，需根据后端实际返回调整）
+        let fullAvatarUrl = "/JavaWeb" + avatar;
+        updateAvatarDisplay(fullAvatarUrl);
+        if(currentName == null){
+          console.log("没加载出来!")
+        }else{
+          currentName.innerText = name;
+          editName.value = name;
+        }
+        if(currentDescription == null){
+          console.log("个人简介没加载出来!")
+        }else{
+          currentDescription.innerText = description;
+          editDescription.innerText = description;
+        }
+        // 性别图标与选择框的初始化
+        if (genderIcon) {
+          if (gender === '男') {
+            genderIcon.innerHTML = '♂';
+            genderIcon.style.color = 'dodgerblue';
+          } else if (gender === '女') {
+            genderIcon.innerHTML = '♀';
+            genderIcon.style.color = 'hotpink';
+          } else {
+            genderIcon.innerHTML = '';
+          }
+        }
+        if (genderSelect) {
+          genderSelect.value = gender || '男'; // 若gender为空，默认选“男”
+        }
+      }
+    } catch (error) {
+      console.error("检查登录状态失败：", error);
+    }
+  }
+
+</script>
+</body>
+</html>

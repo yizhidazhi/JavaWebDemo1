@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <title>用户注册</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js" type="module"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            start: '#7b4397',
+                            end: '#4568dc'
+                        },
+                        form: {
+                            border: '#d1d5db',
+                            focus: '#4568dc'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .bg-gradient-custom {
+                background: linear-gradient(135deg, #7b4397 0%, #4568dc 100%);
+            }
+            .form-input-focus {
+                @apply border-form-focus ring-1 ring-form-focus;
+            }
+            .btn-primary {
+                @apply bg-gradient-custom text-white py-2 px-4 rounded hover:opacity-90 transition-all duration-200;
+            }
+            .btn-outline {
+                @apply border border-form-focus text-form-focus py-2 px-4 rounded hover:bg-primary-start/5 transition-all duration-200;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-custom min-h-screen font-sans">
+<!-- 顶部返回按钮 -->
+<div class="w-full p-4 pt-6">
+    <button id="backBtn" class="text-white hover:text-opacity-80 transition-colors">
+        <i class="fa fa-arrow-left mr-1"></i>返回
+    </button>
+</div>
+
+<!-- 主内容区 -->
+<div class="flex justify-center px-4 pb-8">
+    <!-- 注册卡片 -->
+    <div class="w-full max-w-md bg-white rounded-xl p-6 md:p-8 shadow-lg">
+        <!-- Logo和标题 -->
+        <div class="flex flex-col items-center mb-8">
+            <div class="flex items-center mb-3">
+                <span class="text-xl font-bold bg-gradient-to-r from-primary-start to-primary-end bg-clip-text text-transparent">账户注册</span>
+            </div>
+            <p class="text-gray-500 text-sm">请填写以下信息完成注册</p>
+        </div>
+
+        <!-- 注册表单 -->
+        <form id="registerForm">
+            <!-- 昵称输入 -->
+            <div class="mb-5 flex items-center">
+                <label for="name" class="block w-20 text-gray-700 text-sm">昵称</label>
+                <input type="text" id="name" placeholder="输入昵称"
+                       class="flex-1 px-3 py-2.5 border border-form-border rounded focus:outline-none focus:form-input-focus transition-all text-sm">
+            </div>
+
+            <!-- 邮箱输入 -->
+            <div class="mb-5 flex items-center">
+                <label for="email" class="block w-20 text-gray-700 text-sm">邮箱</label>
+                <input type="email" id="email" placeholder="输入邮箱号"
+                       class="flex-1 px-3 py-2.5 border border-form-border rounded focus:outline-none focus:form-input-focus transition-all text-sm">
+            </div>
+
+            <!-- 密码输入 -->
+            <div class="mb-5 flex items-center">
+                <label for="password" class="block w-20 text-gray-700 text-sm">密码</label>
+                <div class="relative flex-1">
+                    <input type="password" id="password" placeholder="输入密码"
+                           class="w-full px-3 py-2.5 border border-form-border rounded focus:outline-none focus:form-input-focus transition-all text-sm">
+                    <button type="button" class="toggle-password absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-form-focus transition-colors" data-target="password">
+                        <i class="fa fa-eye-slash"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 再次输入密码 -->
+            <div class="mb-5 flex items-center">
+                <label for="confirmPassword" class="block w-20 text-gray-700 text-sm">确认密码</label>
+                <div class="relative flex-1">
+                    <input type="password" id="confirmPassword" placeholder="再次输入密码"
+                           class="w-full px-3 py-2.5 border border-form-border rounded focus:outline-none focus:form-input-focus transition-all text-sm">
+                    <button type="button" class="toggle-password absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-form-focus transition-colors" data-target="confirmPassword">
+                        <i class="fa fa-eye-slash"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 图形验证码 -->
+            <div class="mb-5 flex items-center">
+                <label for="graphicCaptcha" class="block w-20 text-gray-700 text-sm">图形验证</label>
+                <div class="flex-1 flex gap-2 items-center">
+                    <input type="text" id="graphicCaptcha" placeholder="输入图形验证码"
+                           class="flex-1 px-3 py-2.5 border border-form-border rounded focus:outline-none focus:form-input-focus transition-all text-sm">
+                    <div class="relative">
+                        <canvas id="captchaCanvas" width="100" height="38" class="border border-form-border rounded cursor-pointer"></canvas>
+                        <button
+                                type="button"
+                                id="refreshCaptcha"
+                                class="absolute inset-0 flex items-center justify-center bg-black/20 text-white opacity-0 hover:opacity-100 transition-opacity"
+                        >
+                            <i class="fa fa-refresh"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <p id="captchaError" class="text-red-500 text-xs ml-[80px] mb-5 hidden">图形验证码不正确</p>
+
+            <!-- 手机/邮箱验证码 -->
+            <div class="mb-8 flex items-center">
+                <label for="verifyCode" class="block w-20 text-gray-700 text-sm">验证码</label>
+                <div class="flex-1 flex gap-2">
+                    <input type="text" id="verifyCode" placeholder="输入验证码"
+                           class="flex-1 px-3 py-2.5 border border-form-border rounded focus:outline-none focus:form-input-focus transition-all text-sm">
+                    <button type="button" id="sendCodeBtn" class="btn-outline text-sm whitespace-nowrap">
+                        发送验证码
+                    </button>
+                </div>
+            </div>
+
+            <!-- 按钮区域 -->
+            <div class="flex justify-center gap-4">
+                <button type="submit" class="btn-primary min-w-[100px]">注册</button>
+                <button type="button" id="cancelBtn" class="btn-outline min-w-[100px]">取消</button>
+                <div id="login-message" class="message"></div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // 生成随机验证码
+    let currentCaptcha = '';
+    const captchaCanvas = document.getElementById('captchaCanvas');
+    const captchaCtx = captchaCanvas.getContext('2d');
+    const refreshCaptchaBtn = document.getElementById('refreshCaptcha');
+
+    // 生成图形验证码
+    function generateCaptcha() {
+        // 清空画布
+        captchaCtx.clearRect(0, 0, captchaCanvas.width, captchaCanvas.height);
+
+        // 填充背景色
+        captchaCtx.fillStyle = '#f9fafb';
+        captchaCtx.fillRect(0, 0, captchaCanvas.width, captchaCanvas.height);
+
+        // 生成随机字符串
+        const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+        currentCaptcha = '';
+        for (let i = 0; i < 4; i++) {
+            currentCaptcha += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+
+        // 绘制文字，每个字符位置和旋转角度随机
+        for (let i = 0; i < currentCaptcha.length; i++) {
+            captchaCtx.fillStyle = `rgb(${Math.floor(Math.random() * 100) + 50}, ${Math.floor(Math.random() * 50)}, ${Math.floor(Math.random() * 200) + 50})`;
+            captchaCtx.font = 'bold 20px Arial, sans-serif';
+            captchaCtx.save();
+            captchaCtx.translate(20 + i * 20, 25);
+            captchaCtx.rotate((Math.random() - 0.5) * 0.4); // 轻微旋转
+            captchaCtx.fillText(currentCaptcha[i], 0, 0);
+            captchaCtx.restore();
+        }
+
+        // 绘制干扰线
+        for (let i = 0; i < 3; i++) {
+            captchaCtx.strokeStyle = `rgba(${Math.floor(Math.random() * 120) + 50}, ${Math.floor(Math.random() * 50) + 30}, ${Math.floor(Math.random() * 200) + 50}, 0.3)`;
+            captchaCtx.beginPath();
+            captchaCtx.moveTo(Math.random() * captchaCanvas.width, Math.random() * captchaCanvas.height);
+            captchaCtx.lineTo(Math.random() * captchaCanvas.width, Math.random() * captchaCanvas.height);
+            captchaCtx.lineWidth = Math.random() * 2 + 1;
+            captchaCtx.stroke();
+        }
+
+        // 绘制干扰点
+        for (let i = 0; i < 30; i++) {
+            captchaCtx.fillStyle = `rgba(${Math.floor(Math.random() * 150)}, ${Math.floor(Math.random() * 100)}, ${Math.floor(Math.random() * 200)}, 0.2)`;
+            captchaCtx.beginPath();
+            captchaCtx.arc(Math.random() * captchaCanvas.width, Math.random() * captchaCanvas.height, Math.random() * 2, 0, Math.PI * 2);
+            captchaCtx.fill();
+        }
+    }
+
+    // 刷新验证码
+    refreshCaptchaBtn.addEventListener('click', generateCaptcha);
+    captchaCanvas.addEventListener('click', generateCaptcha);
+
+    // 初始化验证码
+    generateCaptcha();
+
+    // 密码显示/隐藏切换
+    document.querySelectorAll('.toggle-password').forEach(button => {
+        button.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            const icon = this.querySelector('i');
+
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            }
+        });
+    });
+
+    // 发送验证码功能
+    const sendCodeBtn = document.getElementById('sendCodeBtn');
+    sendCodeBtn.addEventListener('click', async function () {
+        const email = document.getElementById('email').value;
+        const graphicCaptcha = document.getElementById('graphicCaptcha').value.trim();
+        const captchaError = document.getElementById('captchaError');
+
+        // 验证图形验证码
+        if (graphicCaptcha.toUpperCase() !== currentCaptcha.toUpperCase()) {
+            captchaError.classList.remove('hidden');
+            return;
+        } else {
+            captchaError.classList.add('hidden');
+        }
+
+        // 简单验证邮箱格式
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            alert('请输入有效的邮箱地址');
+            return;
+        }
+
+        const param = new URLSearchParams();
+        param.append('email', email);
+
+        // 发送验证码请求
+        await axios.post("http://localhost:8881/JavaWeb/Verify", param,
+            {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            })
+        // 模拟发送验证码
+        console.log(`向邮箱 ${email} 发送验证码`);
+        alert('验证码已发送，请注意查收');
+
+        // 倒计时功能
+        let countdown = 60;
+        sendCodeBtn.disabled = true;
+        sendCodeBtn.textContent = `重新发送(${countdown}s)`;
+
+        const timer = setInterval(() => {
+            countdown--;
+            sendCodeBtn.textContent = `重新发送(${countdown}s)`;
+
+            if (countdown <= 0) {
+                clearInterval(timer);
+                sendCodeBtn.disabled = false;
+                sendCodeBtn.textContent = '发送验证码';
+            }
+        }, 1000);
+    });
+
+    // 表单提交处理
+    const registerForm = document.getElementById('registerForm');
+    registerForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        // 获取表单值
+        const name = document.getElementById('name').value;
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        const verifyCode = document.getElementById('verifyCode').value;
+        const graphicCaptcha = document.getElementById('graphicCaptcha').value.trim();
+        const captchaError = document.getElementById('captchaError');
+
+        // 验证图形验证码
+        if (graphicCaptcha.toUpperCase() !== currentCaptcha.toUpperCase()) {
+            captchaError.classList.remove('hidden');
+            return;
+        } else {
+            captchaError.classList.add('hidden');
+        }
+
+        // 简单验证
+        if (!name) {
+            alert('请输入昵称');
+            return;
+        }
+
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            alert('请输入有效的邮箱地址');
+            return;
+        }
+
+        if (password.length < 6) {
+            alert('密码长度不能少于6位');
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            alert('两次输入的密码不一致');
+            return;
+        }
+        if (!verifyCode) {
+            alert('请输入验证码');
+            return;
+        }
+
+        const params = new URLSearchParams();
+        params.append('name', name);
+        params.append('email', email);
+        params.append('password', password);
+        params.append('verifyCode', verifyCode);
+
+        // 提交注册信息
+        await axios.post("http://localhost:8881/JavaWeb/Register", params,
+            {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            })
+            .then((response) => {
+                if (response.data.success) {
+                    alert("注册成功！即将跳转到登录页面");
+                    // 实际应用中这里会跳转到登录页面
+                    window.location.href = "login.html";
+                } else {
+                    alert("注册失败");
+                }
+            })
+    });
+
+
+    // 输入图形验证码时移除错误提示
+    document.getElementById('graphicCaptcha').addEventListener('input', function() {
+        document.getElementById('captchaError').classList.add('hidden');
+    });
+
+
+    // 取消按钮
+    document.getElementById('cancelBtn').addEventListener('click', function() {
+        if (confirm('确定要取消注册吗？已填写的内容将被清空')) {
+            registerForm.reset();
+        }
+    });
+    // 返回按钮
+    document.getElementById('backBtn').addEventListener('click', function() {
+        if (confirm('确定要返回吗？已填写的内容将被清空')) {
+            registerForm.reset();
+        }
+    });
+
+</script>
+</body>
+</html>

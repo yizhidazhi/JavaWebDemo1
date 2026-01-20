@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>搜索结果 - 博客平台</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js" type="module"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+    <style>
+        /* 基础重置与全局样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, 'Microsoft YaHei', '微软雅黑', sans-serif;
+        }
+
+        body {
+            background-color: #f5f6f7;
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 通用组件样式 */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+            width: 100%;
+        }
+
+        a {
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .btn-primary {
+            background-color: #ff5722;
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background-color: #e64a19; /* 主色加深，增强hover反馈 */
+            transform: translateY(-1px);
+        }
+
+        /* 导航栏样式（优化品牌感与交互） */
+        .navbar {
+            background-color: #232629;
+            color: #fff;
+            padding: 12px 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); /* 加深阴影，增强层次感 */
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 24px;
+            font-weight: 700;
+            color: #ff5722;
+        }
+
+        .logo i {
+            font-size: 28px; /* 增加图标，强化品牌标识 */
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 25px;
+        }
+
+        .nav-links a {
+            color: #e0e0e0;
+            font-size: 16px;
+            padding: 4px 0;
+            position: relative;
+        }
+
+        .nav-links a:hover {
+            color: #ff5722;
+        }
+
+        /* 导航链接下划线动画 */
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: #ff5722;
+            transition: width 0.3s ease;
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        /* 搜索框优化（更精致的圆角与阴影） */
+        .search-box {
+            display: flex;
+            align-items: center;
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            flex: 1;
+            max-width: 400px; /* 限制最大宽度，避免拉伸过度 */
+        }
+
+        .search-box input {
+            border: none;
+            padding: 10px 16px;
+            width: 100%;
+            outline: none;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .search-box input::placeholder {
+            color: #999;
+        }
+
+        .search-box button {
+            background-color: #ff5722;
+            border: none;
+            color: #fff;
+            padding: 10px 18px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .search-box button:hover {
+            background-color: #e64a19;
+        }
+
+        /* 用户操作区（优化头像显示） */
+        .user-actions {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .user-actions a {
+            color: #e0e0e0;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .user-actions a:hover {
+            color: #ff5722;
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            margin-right: 0;
+            object-fit: cover;
+            border: 2px solid transparent;
+            transition: border-color 0.3s ease;
+        }
+
+        .user-avatar:hover {
+            border-color: #ff5722; /* 头像hover边框高亮 */
+        }
+
+        /* 搜索结果区域（强化视觉层次） */
+        .search-results {
+            margin-top: 32px;
+            padding-bottom: 40px;
+            flex: 1; /* 让内容区占满剩余高度，页脚固定在底部 */
+        }
+
+        .search-header {
+            margin-bottom: 24px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .search-header h1 {
+            font-size: 22px;
+            font-weight: 600;
+            color: #222;
+        }
+
+        .search-term {
+            color: #ff5722;
+            font-weight: 600;
+            background-color: #fff0e6; /* 浅色背景高亮搜索词，更醒目 */
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin: 0 4px;
+        }
+
+        .result-count {
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* 加载动画（新增，提升等待体验） */
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 0;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #ff5722;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* 空结果状态（优化，更友好的提示） */
+        .empty-results {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 80px 0;
+            text-align: center;
+        }
+
+        .empty-results i {
+            font-size: 64px;
+            color: #ddd;
+            margin-bottom: 24px;
+        }
+
+        .empty-results h3 {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 12px;
+        }
+
+        .empty-results p {
+            color: #666;
+            font-size: 14px;
+            max-width: 400px;
+            margin-bottom: 24px;
+        }
+
+        /* 博客卡片（精致化，增强阴影与交互） */
+        .blog-card {
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            padding: 24px;
+        }
+
+        .blog-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12); /* 加深阴影，增强悬浮感 */
+        }
+
+        .blog-card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .blog-card-title a {
+            color: #222;
+        }
+
+        .blog-card-title a:hover {
+            color: #ff5722;
+            text-decoration: underline;
+            text-underline-offset: 4px; /* 下划线偏移，更美观 */
+        }
+
+        .blog-card-meta {
+            display: flex;
+            gap: 20px;
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+
+        .blog-card-meta span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .blog-card-excerpt {
+            color: #555;
+            font-size: 14px;
+            line-height: 1.8;
+            margin-bottom: 20px;
+            display: -webkit-box;
+            -webkit-line-clamp: 3; /* 限制3行，避免内容过长 */
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        /* 标签样式优化 */
+        .blog-card-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .tag {
+            background-color: #fff0e6;
+            color: #ff5722;
+            padding: 4px 12px;
+            border-radius: 16px; /* 胶囊形标签，更现代 */
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .tag:hover {
+            background-color: #ff5722;
+            color: #fff;
+        }
+
+        /* 操作区（点赞/收藏优化） */
+        .blog-card-actions {
+            display: flex;
+            gap: 20px;
+            color: #666;
+            font-size: 13px;
+        }
+
+        .blog-card-actions span {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .blog-card-actions span:hover {
+            color: #ff5722;
+        }
+
+        /* 点赞/收藏选中状态 */
+        .blog-card-actions span.liked i,
+        .blog-card-actions span.starred i {
+            color: #ff5722;
+            transform: scale(1.1); /* 选中时轻微放大，增强反馈 */
+        }
+
+        /* 页脚样式（优化交互与间距） */
+        .footer {
+            background-color: #232629;
+            color: #999;
+            padding: 40px 0 20px;
+            margin-top: auto; /* 固定在底部 */
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .footer-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+        }
+
+        .footer-links a {
+            color: #ccc;
+            font-size: 14px;
+        }
+
+        .footer-links a:hover {
+            color: #ff5722;
+            text-decoration: underline;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 16px;
+        }
+
+        .social-links a {
+            color: #ccc;
+            font-size: 20px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #333;
+        }
+
+        .social-links a:hover {
+            color: #fff;
+            background-color: #ff5722;
+            transform: translateY(-2px);
+        }
+
+        .copyright {
+            text-align: center;
+            font-size: 13px;
+            padding-top: 20px;
+            border-top: 1px solid #333;
+        }
+
+        /* 响应式优化（新增汉堡菜单，适配小屏幕） */
+        .menu-toggle {
+            display: none;
+            font-size: 24px;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        @media (max-width: 992px) {
+            .search-box {
+                max-width: 300px;
+            }
+
+            .nav-links {
+                gap: 18px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .menu-toggle {
+                display: block;
+            }
+
+            /* 导航链接折叠 */
+            .nav-links {
+                position: absolute;
+                top: 64px;
+                left: 0;
+                right: 0;
+                background-color: #232629;
+                flex-direction: column;
+                padding: 20px;
+                gap: 16px;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+                transform: translateY(-120%);
+                transition: transform 0.3s ease;
+                z-index: 99;
+            }
+
+            .nav-links.show {
+                transform: translateY(0);
+            }
+
+            .nav-container {
+                flex-wrap: wrap;
+            }
+
+            .search-box {
+                order: 3;
+                width: 100%;
+                max-width: none;
+            }
+
+            .user-actions {
+                gap: 16px;
+            }
+
+            .blog-card {
+                padding: 18px;
+            }
+
+            .blog-card-meta {
+                gap: 12px;
+                flex-wrap: wrap;
+            }
+
+            .footer-content {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .logo {
+                font-size: 20px;
+            }
+
+            .search-header h1 {
+                font-size: 18px;
+            }
+
+            .empty-results i {
+                font-size: 48px;
+            }
+
+            .empty-results h3 {
+                font-size: 18px;
+            }
+
+            .footer-links {
+                gap: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+<!-- 导航栏 -->
+<nav class="navbar">
+    <div class="container nav-container">
+        <div class="logo">
+            <i class="fas fa-pen-fancy"></i>
+            <span>博客平台</span>
+        </div>
+
+        <!-- 汉堡菜单（响应式新增） -->
+        <div class="menu-toggle" id="menuToggle">
+            <i class="fas fa-bars"></i>
+        </div>
+
+        <!-- 导航链接 -->
+        <div class="nav-links" id="navLinks">
+            <a href="index.html"><i class="fas fa-home"></i> 首页</a>
+            <a href="#"><i class="fas fa-blog"></i> 博客</a>
+            <a href="#"><i class="fas fa-download"></i> 下载</a>
+        </div>
+
+        <!-- 搜索框 -->
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="搜索博客、作者、标签...">
+            <button id="searchButton" class="btn btn-primary">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+
+        <!-- 用户操作区 -->
+        <div class="user-actions">
+            <a href="#"><i class="fas fa-bell"></i> 通知</a>
+            <div id="loginContainer">
+                <a href="login.html" id="loginNavLink">
+                    <span id="userInfo">
+                        <!-- 未登录时显示默认头像 -->
+                        <img src="https://via.placeholder.com/36/eee/999?text=未登录" class="user-avatar" alt="用户头像">
+                        <span>登录</span>
+                    </span>
+                </a>
+            </div>
+            <a href="login.html" id="writeBlog">
+                <i class="fas fa-edit"></i> 写博客
+            </a>
+        </div>
+    </div>
+</nav>
+
+<!-- 搜索结果区域 -->
+<div class="container search-results">
+    <div class="search-header">
+        <h1>搜索结果</h1>
+        <span>包含关键词 <span class="search-term" id="searchTerm"></span></span>
+        <span class="result-count" id="resultCount">找到 0 条相关结果</span>
+    </div>
+
+    <!-- 加载动画（默认隐藏） -->
+    <div class="loading-container" id="loadingContainer" style="display: none;">
+        <div class="spinner"></div>
+        <div class="loading-text">正在查找相关博客...</div>
+    </div>
+
+    <!-- 空结果状态（默认隐藏） -->
+    <div class="empty-results" id="emptyResults" style="display: none;">
+        <i class="fas fa-search"></i>
+        <h3>未找到相关结果</h3>
+        <p>没有找到与“<span class="search-term" id="emptySearchTerm"></span>”相关的博客，试试调整关键词或检查拼写吧～</p>
+        <button class="btn btn-primary" id="retrySearch">
+            <i class="fas fa-redo"></i> 重新搜索
+        </button>
+    </div>
+
+    <!-- 搜索结果列表 -->
+    <div id="resultsContainer"></div>
+</div>
+
+<!-- 页脚 -->
+<footer class="footer">
+    <div class="container">
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="#">关于我们</a>
+                <a href="#">联系我们</a>
+                <a href="#">服务条款</a>
+                <a href="#">隐私政策</a>
+                <a href="#">帮助中心</a>
+                <a href="#">招贤纳士</a>
+            </div>
+
+            <div class="social-links">
+                <a href="#"><i class="fab fa-weixin"></i></a>
+                <a href="#"><i class="fab fa-weibo"></i></a>
+                <a href="#"><i class="fab fa-github"></i></a>
+                <a href="#"><i class="fab fa-linkedin"></i></a>
+            </div>
+        </div>
+        <div class="copyright">
+            © 2023 CSDN风格博客平台 | 版权所有
+        </div>
+    </div>
+</footer>
+
+<script>
+    // 获取URL中的搜索参数
+    function getSearchQuery() {
+        const params = new URLSearchParams(window.location.search);
+        return params.get('query') ? decodeURIComponent(params.get('query')) : '';
+    }
+
+    // 显示搜索词
+    function displaySearchTerm() {
+        const searchTerm = getSearchQuery();
+        if (searchTerm) {
+            document.getElementById('searchTerm').textContent = searchTerm;
+            document.getElementById('emptySearchTerm').textContent = searchTerm;
+            document.getElementById('searchInput').value = searchTerm;
+        }
+    }
+
+    // 显示/隐藏加载状态
+    function toggleLoading(show) {
+        const loadingContainer = document.getElementById('loadingContainer');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const emptyResults = document.getElementById('emptyResults');
+
+        if (show) {
+            loadingContainer.style.display = 'flex';
+            resultsContainer.style.display = 'none';
+            emptyResults.style.display = 'none';
+        } else {
+            loadingContainer.style.display = 'none';
+        }
+    }
+
+    // 显示空结果状态
+    function showEmptyResults() {
+        const emptyResults = document.getElementById('emptyResults');
+        const resultsContainer = document.getElementById('resultsContainer');
+        emptyResults.style.display = 'flex';
+        resultsContainer.style.display = 'none';
+    }
+
+    // 渲染搜索结果
+    function renderSearchResults(articles, labels) {
+        const resultsContainer = document.getElementById('resultsContainer');
+        const resultCount = document.getElementById('resultCount');
+
+        // 更新结果计数
+        resultCount.textContent = `找到 ${articles.length} 条相关结果`;
+
+        // 清空容器并显示结果区
+        resultsContainer.innerHTML = '';
+        resultsContainer.style.display = 'block';
+
+        // 无结果时显示空状态
+        if (articles.length === 0) {
+            showEmptyResults();
+            return;
+        }
+
+        // 添加结果到页面
+        articles.forEach((article, index) => {
+            const articleLabels = labels[index] || [];
+
+            // 处理日期格式
+            const date = new Date(article.article_date);
+            const formattedDate = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+
+            // 创建博客卡片
+            const blogCard = document.createElement('div');
+            blogCard.className = 'blog-card';
+
+            // 构建标签HTML
+            const tagsHtml = articleLabels.length > 0
+                ? articleLabels.map(tag => `
+                    <a href="blog.html?articleId=${article.article_id}&tag=${encodeURIComponent(tag)}" class="tag">
+                        ${tag}
+                    </a>
+                `).join('')
+                : '';
+
+            // 设置卡片内容
+            blogCard.innerHTML = `
+                <div class="blog-card-title">
+                    <a href="blog.html?article=${article.article_id}">${article.article_title}</a>
+                </div>
+                <div class="blog-card-meta">
+                    <span><i class="far fa-calendar-alt"></i> ${formattedDate}</span>
+                    <span><i class="far fa-eye"></i> ${article.article_view} 阅读</span>
+                    <span><i class="far fa-comment"></i> ${article.article_comments_count} 评论</span>
+                </div>
+                <div class="blog-card-excerpt">
+                    ${article.article_content || '该博客暂无摘要，点击查看全文...'}
+                </div>
+                <div class="blog-card-footer" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="blog-card-tags">
+                        ${tagsHtml}
+                    </div>
+                    <div class="blog-card-actions">
+                        <span class="like-btn" data-article-id="${article.article_id}">
+                            <i class="far fa-thumbs-up"></i>
+                            <span class="like-count">${article.article_like}</span>
+                        </span>
+                        <span class="star-btn" data-article-id="${article.article_id}">
+                            <i class="far fa-star"></i>
+                            <span>收藏</span>
+                        </span>
+                    </div>
+                </div>
+            `;
+
+            resultsContainer.appendChild(blogCard);
+        });
+
+        // 绑定交互事件（事件委托，支持动态元素）
+        bindInteractionEvents();
+    }
+
+    // 绑定交互事件（事件委托，避免动态元素绑定失效）
+    function bindInteractionEvents() {
+        const resultsContainer = document.getElementById('resultsContainer');
+
+        // 点赞功能
+        resultsContainer.addEventListener('click', function(e) {
+            const likeBtn = e.target.closest('.like-btn');
+            if (likeBtn) {
+                const likeIcon = likeBtn.querySelector('i');
+                const likeCount = likeBtn.querySelector('.like-count');
+                let count = parseInt(likeCount.textContent);
+
+                // 切换点赞状态
+                if (likeIcon.classList.contains('far')) {
+                    likeIcon.classList.replace('far', 'fas');
+                    likeBtn.classList.add('liked');
+                    likeCount.textContent = count + 1;
+                } else {
+                    likeIcon.classList.replace('fas', 'far');
+                    likeBtn.classList.remove('liked');
+                    likeCount.textContent = count - 1;
+                }
+            }
+        });
+
+        // 收藏功能
+        resultsContainer.addEventListener('click', function(e) {
+            const starBtn = e.target.closest('.star-btn');
+            if (starBtn) {
+                const starIcon = starBtn.querySelector('i');
+                // 切换收藏状态
+                if (starIcon.classList.contains('far')) {
+                    starIcon.classList.replace('far', 'fas');
+                    starBtn.classList.add('starred');
+                } else {
+                    starIcon.classList.replace('fas', 'far');
+                    starBtn.classList.remove('starred');
+                }
+            }
+        });
+    }
+
+    // 搜索功能
+    function initSearch() {
+        const searchButton = document.getElementById('searchButton');
+        const searchInput = document.getElementById('searchInput');
+        const retrySearchBtn = document.getElementById('retrySearch');
+
+        // 搜索按钮点击
+        searchButton.addEventListener('click', triggerSearch);
+
+        // 回车搜索
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') triggerSearch();
+        });
+
+        // 重新搜索按钮（空状态）
+        retrySearchBtn.addEventListener('click', function() {
+            searchInput.focus();
+        });
+
+        // 触发搜索
+        function triggerSearch() {
+            const searchTerm = searchInput.value.trim();
+            if (searchTerm) {
+                window.location.href = `search.html?query=${encodeURIComponent(searchTerm)}`;
+            } else {
+                alert('请输入搜索关键词');
+                searchInput.focus();
+            }
+        }
+    }
+
+    // 初始化响应式汉堡菜单
+    function initResponsiveMenu() {
+        const menuToggle = document.getElementById('menuToggle');
+        const navLinks = document.getElementById('navLinks');
+
+        menuToggle.addEventListener('click', function() {
+            navLinks.classList.toggle('show');
+            // 切换图标（菜单展开/收起）
+            const icon = menuToggle.querySelector('i');
+            if (icon.classList.contains('bars')) {
+                icon.classList.replace('bars', 'times');
+            } else {
+                icon.classList.replace('times', 'bars');
+            }
+        });
+
+        // 点击导航链接后收起菜单（移动端）
+        const navLinksItems = navLinks.querySelectorAll('a');
+        navLinksItems.forEach(link => {
+            link.addEventListener('click', function() {
+                if (window.innerWidth <= 768) {
+                    navLinks.classList.remove('show');
+                    menuToggle.querySelector('i').classList.replace('times', 'bars');
+                }
+            });
+        });
+    }
+
+    // 登录状态检查
+    async function checkLogin() {
+        try {
+            const res = await axios.get("http://localhost:8881/JavaWeb/mainScreen");
+            const isLoginIn = res.data.isLogin;
+            let userAvatar = res.data.avatar;
+
+            const loginNavLink = document.getElementById('loginNavLink');
+            const userInfoSpan = document.getElementById('userInfo');
+            const writeBlog = document.getElementById('writeBlog');
+
+            if (isLoginIn && userAvatar) {
+                // 拼接正确的头像路径
+                userAvatar = userAvatar.startsWith('/') ? userAvatar : `/JavaWeb${userAvatar}`;
+                userInfoSpan.innerHTML = `
+                    <img src="${userAvatar}" class="user-avatar" alt="用户头像" onerror="this.src='https://via.placeholder.com/36/eee/999?text=默认'">
+                    <span>我的主页</span>
+                `;
+                loginNavLink.href = "user.html"; // 登录后跳转个人主页
+                writeBlog.href = "writeBlog.html";
+            } else {
+                // 未登录时显示默认头像
+                userInfoSpan.innerHTML = `
+                    <img src="https://via.placeholder.com/36/eee/999?text=未登录" class="user-avatar" alt="未登录">
+                    <span>登录</span>
+                `;
+                loginNavLink.href = "login.html";
+                writeBlog.href = "login.html";
+            }
+        } catch (error) {
+            console.error("检查登录状态失败:", error);
+            // 异常时显示默认未登录状态
+            const userInfoSpan = document.getElementById('userInfo');
+            userInfoSpan.innerHTML = `
+                <img src="https://via.placeholder.com/36/eee/999?text=未登录" class="user-avatar" alt="未登录">
+                <span>登录</span>
+            `;
+        }
+    }
+
+    // 页面加载初始化
+    window.addEventListener('DOMContentLoaded', function() {
+        // 初始化基础功能
+        displaySearchTerm();
+        initSearch();
+        initResponsiveMenu();
+        checkLogin();
+
+        // 获取搜索关键词并发起请求
+        const searchTerm = getSearchQuery();
+        if (searchTerm) {
+            toggleLoading(true); // 显示加载动画
+
+            axios({
+                method: 'POST',
+                url: "http://localhost:8881/JavaWeb/Search",
+                data: JSON.stringify({ content: searchTerm }),
+                headers: { 'Content-Type': 'application/json' }
+            }).then(response => {
+                toggleLoading(false); // 隐藏加载动画
+                const responseData = response.data;
+
+                if (responseData.success) {
+                    const labels = responseData.labels || [];
+                    const articles = responseData.articles || [];
+                    renderSearchResults(articles, labels);
+                } else {
+                    console.log("搜索失败");
+                    showEmptyResults();
+                }
+            }).catch(error => {
+                toggleLoading(false);
+                console.error("搜索请求错误:", error);
+                showEmptyResults(); // 网络错误也显示空状态
+            });
+        } else {
+            // 无搜索词时显示空状态
+            showEmptyResults();
+        }
+    });
+</script>
+</body>
+</html>

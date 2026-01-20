@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>抖音风格评论区</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
+
+        body {
+            background-color: #f8f8f8;
+            color: #333;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+
+
+        .comments-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .comments-header h2 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            font-size: 24px;
+            color: #999;
+            cursor: pointer;
+        }
+
+        .comments-list {
+            padding: 0 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .comment {
+            padding: 15px 0;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+        }
+
+        .comment-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #ff0050;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .comment-content {
+            flex-grow: 1;
+        }
+
+        .comment-author {
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-size: 16px;
+        }
+
+        .comment-text {
+            margin-bottom: 8px;
+            line-height: 1.4;
+            font-size: 15px;
+        }
+
+        .comment-actions {
+            display: flex;
+            color: #999;
+            font-size: 13px;
+        }
+
+        .comment-action {
+            margin-right: 15px;
+            cursor: pointer;
+        }
+
+        .comment-action:hover {
+            color: #ff0050;
+        }
+
+        .replies {
+            margin-top: 10px;
+            padding-left: 20px;
+            border-left: 2px solid #f0f0f0;
+            display: none;
+        }
+
+        .replies.expanded {
+            display: block;
+        }
+
+        .toggle-replies {
+            color: #999;
+            font-size: 13px;
+            margin-top: 5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+
+        .toggle-replies i {
+            margin-right: 5px;
+            font-size: 12px;
+        }
+
+        .reply-to {
+            color: #ff0050;
+            font-weight: 500;
+        }
+
+        .comment-input {
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            border-top: 1px solid #eee;
+            background: #fafafa;
+        }
+
+        .input-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: #0095f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .input-field {
+            flex-grow: 1;
+            background: white;
+            border: 1px solid #eee;
+            border-radius: 20px;
+            padding: 8px 15px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .input-field:focus {
+            border-color: #ccc;
+        }
+
+        .send-btn {
+            margin-left: 10px;
+            color: #ff0050;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 4px;
+        }
+
+        .send-btn:hover {
+            background: rgba(255, 0, 80, 0.1);
+        }
+
+        .replying-to {
+            background: #f8f8f8;
+            padding: 8px 15px;
+            font-size: 13px;
+            color: #666;
+            display: none;
+        }
+
+        .replying-to.active {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .cancel-reply {
+            color: #999;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="comments-header">
+        <h2>评论区</h2>
+        <div class="close-btn">&times;</div>
+    </div>
+
+    <div class="replying-to" id="replyingIndicator">
+        <span>回复：<span id="replyingToUser"></span></span>
+        <span class="cancel-reply" onclick="cancelReply()">取消回复</span>
+    </div>
+
+    <div class="comments-list" id="commentsList">
+        <!-- 评论将通过JS动态添加 -->
+    </div>
+
+    <div class="comment-input">
+        <div class="input-avatar">我</div>
+        <input type="text" class="input-field" id="commentInput" placeholder="添加评论...">
+        <div class="send-btn" onclick="addComment()">发送</div>
+    </div>
+</div>
+
+<script>
+    // 当前用户
+    const currentUser = "我";
+
+    // 评论数据
+    let comments = [
+        {
+            id: 1,
+            author: "抖音用户",
+            avatar: "抖",
+            content: "这个视频太棒了，学到了很多！",
+            timestamp: "2小时前",
+            replies: [
+                {
+                    id: 11,
+                    author: "用户A",
+                    avatar: "A",
+                    content: "同意，内容很有价值",
+                    timestamp: "1小时前"
+                },
+                {
+                    id: 12,
+                    author: "用户B",
+                    avatar: "B",
+                    content: "我也觉得不错",
+                    timestamp: "30分钟前"
+                }
+            ]
+        },
+        {
+            id: 2,
+            author: "小红",
+            avatar: "红",
+            content: "背景音乐是什么呀？太好听了",
+            timestamp: "1小时前",
+            replies: []
+        },
+        {
+            id: 3,
+            author: "技术达人",
+            avatar: "技",
+            content: "这个特效是怎么做的？求教程",
+            timestamp: "45分钟前",
+            replies: [
+                {
+                    id: 31,
+                    author: "视频作者",
+                    avatar: "作",
+                    content: "下次我会出教程，记得关注哦",
+                    timestamp: "30分钟前"
+                }
+            ]
+        }
+    ];
+
+    // 当前回复状态
+    let replyingTo = null;
+    let replyingToRoot = false;
+
+    // 初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        renderComments();
+    });
+
+    // 渲染评论列表
+    function renderComments() {
+        const commentsList = document.getElementById('commentsList');
+        commentsList.innerHTML = '';
+
+        comments.forEach(comment => {
+            // 添加根评论
+            const commentElement = createCommentElement(comment, false);
+            commentsList.appendChild(commentElement);
+
+            // 添加回复
+            if (comment.replies && comment.replies.length > 0) {
+                const repliesContainer = document.createElement('div');
+                repliesContainer.className = 'replies';
+                repliesContainer.id = `replies-${comment.id}`;
+
+                comment.replies.forEach(reply => {
+                    const replyElement = createCommentElement(reply, true);
+                    repliesContainer.appendChild(replyElement);
+                });
+
+                commentsList.appendChild(repliesContainer);
+
+                // 添加展开/收起按钮
+                const toggleButton = document.createElement('div');
+                toggleButton.className = 'toggle-replies';
+                toggleButton.innerHTML = `<i class="fas fa-chevron-down"></i> ${comment.replies.length}条回复`;
+                toggleButton.onclick = function() {
+                    toggleReplies(comment.id);
+                };
+
+                commentElement.appendChild(toggleButton);
+            }
+        });
+    }
+
+    // 创建评论元素
+    function createCommentElement(comment, isReply) {
+        const commentDiv = document.createElement('div');
+        commentDiv.className = 'comment';
+        commentDiv.id = `comment-${comment.id}`;
+
+        let htmlContent = `
+                <div class="comment-avatar">${comment.avatar}</div>
+                <div class="comment-content">
+                    <div class="comment-author">${comment.author}</div>
+            `;
+
+        // 如果是回复，显示回复对象
+        if (comment.replyTo) {
+            htmlContent += `<div class="comment-text">回复<span class="reply-to">@${comment.replyTo}</span>：${comment.content}</div>`;
+        } else {
+            htmlContent += `<div class="comment-text">${comment.content}</div>`;
+        }
+
+        htmlContent += `
+                    <div class="comment-actions">
+                        <div class="comment-action">${comment.timestamp}</div>
+                        <div class="comment-action" onclick="likeComment(${comment.id})"><i class="far fa-heart"></i> 赞</div>
+                        <div class="comment-action" onclick="startReply(${comment.id}, ${isReply}, '${comment.author}')">回复</div>
+                    </div>
+                </div>
+            `;
+
+        commentDiv.innerHTML = htmlContent;
+        return commentDiv;
+    }
+
+    // 展开/收起回复
+    function toggleReplies(commentId) {
+        const repliesContainer = document.getElementById(`replies-${commentId}`);
+        const toggleButton = document.querySelector(`#comment-${commentId} .toggle-replies`);
+
+        if (repliesContainer.classList.contains('expanded')) {
+            repliesContainer.classList.remove('expanded');
+            toggleButton.innerHTML = `<i class="fas fa-chevron-down"></i> ${repliesContainer.children.length}条回复`;
+        } else {
+            repliesContainer.classList.add('expanded');
+            toggleButton.innerHTML = `<i class="fas fa-chevron-up"></i> 收起回复`;
+        }
+    }
+
+    // 开始回复
+    function startReply(commentId, isReply, author) {
+        replyingTo = commentId;
+        replyingToRoot = !isReply;
+
+        // 显示回复指示器
+        const replyingIndicator = document.getElementById('replyingIndicator');
+        const replyingToUser = document.getElementById('replyingToUser');
+        replyingToUser.textContent = author;
+        replyingIndicator.classList.add('active');
+
+        // 聚焦输入框
+        document.getElementById('commentInput').focus();
+    }
+
+    // 取消回复
+    function cancelReply() {
+        replyingTo = null;
+        document.getElementById('replyingIndicator').classList.remove('active');
+    }
+
+    // 添加评论
+    function addComment() {
+        const inputField = document.getElementById('commentInput');
+        const content = inputField.value.trim();
+
+        if (!content) return;
+
+        if (replyingTo) {
+            // 添加回复
+            const newReply = {
+                id: Date.now(),
+                author: currentUser,
+                avatar: "我",
+                content: content,
+                timestamp: "刚刚",
+                replyTo: replyingToRoot
+                    ? findCommentAuthor(replyingTo)
+                    : findReplyAuthor(replyingTo)
+            };
+
+            // 找到对应的根评论并添加回复
+            comments.forEach(comment => {
+                if (comment.id === replyingTo || comment.replies.some(reply => reply.id === replyingTo)) {
+                    comment.replies.push(newReply);
+                }
+            });
+
+            // 如果回复的是根评论，确保回复区域是展开的
+            if (replyingToRoot) {
+                const repliesContainer = document.getElementById(`replies-${replyingTo}`);
+                if (repliesContainer && !repliesContainer.classList.contains('expanded')) {
+                    toggleReplies(replyingTo);
+                }
+            }
+
+            cancelReply();
+        } else {
+            // 添加新评论
+            const newComment = {
+                id: Date.now(),
+                author: currentUser,
+                avatar: "我",
+                content: content,
+                timestamp: "刚刚",
+                replies: []
+            };
+
+            comments.unshift(newComment);
+        }
+
+        inputField.value = '';
+        renderComments();
+    }
+
+    // 查找评论作者
+    function findCommentAuthor(commentId) {
+        const comment = comments.find(c => c.id === commentId);
+        return comment ? comment.author : '';
+    }
+
+    // 查找回复作者
+    function findReplyAuthor(replyId) {
+        for (const comment of comments) {
+            const reply = comment.replies.find(r => r.id === replyId);
+            if (reply) return reply.author;
+        }
+        return '';
+    }
+
+    // 点赞功能
+    function likeComment(commentId) {
+        // 这里只是模拟点赞效果
+        const heartIcon = document.querySelector(`#comment-${commentId} .fa-heart`);
+        if (heartIcon.classList.contains('far')) {
+            heartIcon.classList.remove('far');
+            heartIcon.classList.add('fas');
+            heartIcon.style.color = '#ff0050';
+        } else {
+            heartIcon.classList.remove('fas');
+            heartIcon.classList.add('far');
+            heartIcon.style.color = '';
+        }
+    }
+
+    // 按Enter键发送评论
+    document.getElementById('commentInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            addComment();
+        }
+    });
+</script>
+</body>
+</html>
